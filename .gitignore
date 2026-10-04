@@ -1,0 +1,25 @@
+# Node (declared no dependencies today; present if one ever lands)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local state and secrets (unused today; required the moment a keyed source lands)
+.env
+*.env
+.env.local
+*.log
+
+# Editor and OS metadata
+.DS_Store
+*.swp
+
+# VS Code: ignore specific local artefacts only, never the folder wholesale
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+
+# NOTE: data/stations.json and data/station-map.json are vendored SOURCE and
+# must be committed — do not add a blanket `data/` or `*.json` ignore.

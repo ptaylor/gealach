@@ -1,0 +1,10 @@
+{
+  "name": "taoidi",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Tides for a phone in a pocket, starting with Ireland.",
+  "scripts": {
+    "test": "node --test"
+  }
+}

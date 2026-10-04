@@ -1,0 +1,624 @@
+# AGENTS.md
+
+Instructions for any human or AI agent working in this repository.
+
+`tides` is a small tool for reading what the sea is doing at a coastal place:
+the tide's height and state now, when it turns, what the range is, whether we
+are on springs or neaps, and — where a model is available — which way the water
+is running. It is built for a phone in a pocket, and it starts with Ireland.
+
+The working name is **taoidí** (Irish for *tides*) — provisional, and cheap to
+change now, expensive later. As in the sibling repos, the name carries its
+síneadh fada in prose only: file names, commands and identifiers stay ASCII
+(`taoidi`, `tides`).
+
+## Status
+
+The first implementation now exists in the repository: the app shell, the
+three ES modules, the PWA shell, the tests and the docs. The vendored station
+snapshot (`data/stations.json`) and the hand-checked key mapping
+(`data/station-map.json`) are **not yet generated** — `erddap.marine.ie` was
+returning HTTP 504 on **2026-10-04** when the snapshot was due, so those two
+files are regenerated with `tools/refresh-stations.sh` once the server
+recovers. Until they exist the app answers every point with the Open-Meteo
+global model (requirement 10) and says so.
+
+The research below was executed against the live services on **2026-09-30**
+(ERDDAP) and **2026-10-04** (Open-Meteo, NOAA); the observed output is
+recorded with it. Nothing in this file is aspirational about a source that was
+not called. Where a candidate source was *not* verified, it says so (see
+*Candidates, not adopted*).
+
+## What the tool is for
+
+1. **Enter a location** — a place name, or a latitude/longitude — and get the
+   tide there, or at the nearest place that has predictions.
+2. **Say what the tide is doing**, not just what height it is: rising or
+   falling, how fast, how long until high or low, what height that turn will
+   be, and whether the range is spring or neap.
+3. **Say what the water is doing** where a current model covers the point:
+   speed and compass direction, labelled as model output.
+4. **Be honest about distance and provenance.** A prediction from 40 km away is
+   not a prediction "for here", and a point inside the mesh of a regional model
+   is not a tide gauge. Both are shown, never glossed.
+5. **Extend beyond Ireland** without rewriting the interface — a new region is
+   a new source adapter, not a new page.
+
+### Non-goals
+
+- **Not for navigation.** Marine Institute predictions exclude storm surge (we
+  can show surge separately — see the observations below — but the prediction
+  itself does not contain it), and Open-Meteo says in its own documentation that
+  its sea-level product "is not suitable for coastal navigation". The interface
+  says so too, permanently, not in a dismissible toast.
+- **No harmonic synthesis.** No FES/UTide/PyTides dependency and no field of
+  constituents: we ask services for predicted series and derive from those.
+- **No UX pass yet.** The page is plain, readable and phone-sized; the look of
+  it is a later conversation, by agreement.
+- **No backend, no accounts, no analytics.** Every source is called directly
+  from the browser (all three primary sources send
+  `access-control-allow-origin: *` — verified). Nothing about the user is
+  stored or sent anywhere except the place name they typed, which goes to the
+  geocoder.
+- **No native app.** A PWA, installed from the browser.
+
+## Data sources — verified 2026-09-30
+
+### Primary: Marine Institute ERDDAP (Ireland)
+
+`https://erddap.marine.ie/erddap` — ERDDAP 2.14, no key, CORS open, data
+licensed **CC-BY 4.0**, so attribution is mandatory in the interface. 38
+prediction "stations" (`stationID` values are underscored: `Galway`,
+`Malin_Head`, `Dublin_Port`, `Tom_Clarke_Bridge`, …), spanning 51.56–55.37 N
+and 10.28–6.01 W.
+
+| Dataset (`tabledap`) | Gives | Shape |
+| --- | --- | --- |
+| `IMI_TidePrediction_HighLow` | the turns: `time`, `tide_time_category` (`HIGH`/`LOW`), `Water_Level_ODMalin` | 4 rows/day/station |
+| `imiTidePrediction` | the curve: `Water_Level` (above local **LAT**, i.e. chart datum) and `Water_Level_ODM` (relative to **OD Malin**) | 5-minute steps |
+| `imiSurgePrediction` | predicted tide and surge, kept apart: `sea_surface_elevation_due_to_tide`, `..._due_to_storm_surge` | 5-minute steps |
+| `imiSurgeObservationINTGN` | observed tide and surge, kept apart (same two variables) | 21 stations, ~3 h behind real time |
+| `IrishNationalTideGaugeNetwork` | observed water level: `Water_Level_LAT`, `Water_Level_OD_Malin`, `QC_Flag` | 23 stations, 5-minute, near-real-time |
+
+Verified by execution:
+
+```
+# the turns, one station
+https://erddap.marine.ie/erddap/tabledap/IMI_TidePrediction_HighLow.json?stationID,time,tide_time_category,Water_Level_ODMalin&stationID="Galway"&time>=2026-09-30T00:00:00Z&time<=2026-10-02T00:00:00Z
+  → ["Galway","2026-09-30T00:35:00Z","LOW",-2.274] ["Galway","2026-09-30T07:00:00Z","HIGH",2.235] …
+
+# the curve, one station
+https://erddap.marine.ie/erddap/tabledap/imiTidePrediction.json?stationID,time,Water_Level,Water_Level_ODM&stationID="Galway"&time>=2026-09-30T06:00:00Z&time<=2026-09-30T08:00:00Z
+  → ["Galway","2026-09-30T06:00:00Z",4.85,1.91], then 5-minute steps rising to the 07:00 turn
+
+# the station list, for the vendored snapshot
+https://erddap.marine.ie/erddap/tabledap/IMI_TidePrediction_HighLow.csv?stationID,longitude,latitude&distinct()
+
+# observed level (note the variables — `altitude` is a dummy)
+https://erddap.marine.ie/erddap/tabledap/IrishNationalTideGaugeNetwork.json?station_id,time,Water_Level_LAT,Water_Level_OD_Malin,QC_Flag&station_id="Galway Port"&time>=2026-09-30T00:00:00Z
+  → ["Galway Port","2026-09-30T00:00:00Z",1.2,-1.749,0]
+
+# observed tide and surge, split
+https://erddap.marine.ie/erddap/tabledap/imiSurgeObservationINTGN.json?stationID,time,sea_surface_elevation_due_to_tide,sea_surface_elevation_due_to_storm_surge&stationID="Galway"&time>=2026-09-30T00:00:00Z
+  → ["Galway","2026-09-30T00:00:00Z",-2.141,0.392] …
+```
+
+Traps, each one observed rather than guessed:
+
+- **`Water_Level` and `Water_Level_ODM` are different datums**, not a rounding
+  difference: for Galway at 06:00Z they were 4.85 m and 1.91 m. Chart datum
+  (LAT) is the one a chart and a tide table use; OD Malin is the land datum.
+  The interface must name which one it is showing, and default to LAT.
+- **`IrishNationalTideGaugeNetwork.altitude` is a dummy** — declared
+  `valid_min 0.0, valid_max 0.0` and it returns `0.0` for every row. The
+  observation is in `Water_Level_LAT` / `Water_Level_OD_Malin`. Do not plot
+  `altitude`.
+- **Three datasets, three spellings of the station key.** Predictions use
+  `stationID` (`Galway`), the gauge network uses `station_id` with long names
+  (`Galway Port`), and the surge observation uses `stationID` again but with
+  compact names (`Galway`, `Dublinport`, `Malinhead`, `Tmbridge`, `Unionhall`).
+  Joining them needs an explicit mapping table; a lookup on the string alone
+  finds nothing (`station_id="Galway"` returns `nRows = 0`).
+- **Prediction coverage moves.** At the time of writing `imiTidePrediction`
+  spanned 2026-01-01 → 2029-01-01, and Marine Institute documents prediction
+  generation for a 6-day window up to two years ahead. Never assume the end
+  date; read the series that comes back, and say so if the request falls
+  outside it.
+- **Not every "station" is a gauge.** The dataset's `files/` listing contains
+  `TP_Achill_Island_MODELLED.nc` beside `TP_Aranmore.nc`: Marine Institute
+  derives predictions from gauge harmonic analysis *and* from its regional ROMS
+  model. Which kind it is changes what the number means.
+- **Harmonic constituents are not published here.** A search of the server for
+  `harmonic` returns nothing but the tide datasets themselves, so a real form
+  factor cannot be computed from what we have — see *Springs and neaps*.
+- **There is no radar/currents observation dataset.** A search for `radar`
+  returns "no matching results". Measured surface currents on this server are
+  the ADCP time series (`smartbay_obs_adcp`, `spiddal_obs_adcp`), which are two
+  Galway Bay sites, not a national picture.
+- **Modelled currents that do exist**: `IMI_NEATL` (gridded, 48–58 N,
+  18–1 W, `sea_surface_x_velocity` / `sea_surface_y_velocity` and bottom
+  equivalents in m/s) and the higher-resolution Connemara model
+  (`IMI_CONN_2D`, `IMI_CONN_3D`) over Galway Bay.
+
+### Fallback and currents: Open-Meteo Marine API
+
+`https://marine-api.open-meteo.com/v1/marine` — no key, CORS open, free for
+non-commercial use below 10,000 calls/day, attribution required. Variables used:
+`sea_level_height_msl` (metres), `ocean_current_velocity`,
+`ocean_current_direction` (compass, "where the current is heading towards").
+Backed by Météo-France SMOC at 0.08° (~8 km), hourly, ~10 days ahead, updated
+daily. Verified for Galway: the grid cell came back at 53.2917 N, 9.0417 W —
+about 2.5 km from the requested point, which is itself worth showing.
+
+Open-Meteo's own documentation is unambiguous and we repeat it in the
+interface: "Accuracy is limited in coastal areas … This data is not suitable
+for coastal navigation."
+
+### Geocoding: Open-Meteo Geocoding API
+
+`https://geocoding-api.open-meteo.com/v1/search?name=…` — no key, CORS open,
+GeoNames-derived (CC-BY 4.0). Returns `latitude`, `longitude` **and `timezone`**
+(`Europe/Dublin` for Galway) plus `country_code`, `admin1`, `population`. One
+call therefore answers both "where is this" and "what time is it there", which
+is why the app never has to guess a timezone.
+
+### Extension: NOAA CO-OPS (United States)
+
+`https://api.tidesandcurrents.noaa.gov/api/prod/datagetter` — no key, CORS open,
+verified. Products `predictions` (`interval=hilo|h|1|6|…`), `currents_predictions`
+(`interval=max_slack` gives max flood, max ebb and slack water — the flood/ebb
+tide-stream data Ireland does not publish), `water_level`, `datums`. US stations
+only, 7-character IDs (`9414290`, `cb1401`). NOAA asks for an `application=`
+parameter and throttles heavy use, so an adapter must identify itself and space
+its calls.
+
+### Candidates, not adopted
+
+Listed with what was and was not checked, so nobody re-derives it:
+
+- **Copernicus Marine — `NWSHELF_ANALYSISFORECAST_PHY_004_013`** (read
+  2026-09-30; *not* called). 1.5 km, 33 levels, hourly, 7-day forecast, covering
+  46–62.74 N and 16 W–13 E — i.e. all of Ireland — with tides coupled in,
+  barotropic and 3-D currents, and companion "assuming no tide" sea-level and
+  velocity fields that would separate tide from weather. Delivered as NetCDF-4
+  from a free-account store, so it needs a server component or a conversion
+  step; it cannot be read by the browser directly.
+- **WorldTides v3** (`https://www.worldtides.info/api/v3`, docs read, not
+  called) — global heights, extremes and datums by lat/lon, `datum=CD|LAT`,
+  a `stationDistance` that would match our nearest-station rule, and a required
+  copyright attribution in every app that uses it. Key plus credits; commercial.
+- **Stormglass v2** (`https://api.stormglass.io/v2`, docs read, not called) —
+  global tide extremes; key required.
+- **UKHO Admiralty UK Tidal API** — commercial, subscription key, covers UK and
+  Irish waters. The developer portal returned HTTP 503 when checked, so this
+  entry is a name and a licence model only; treat it as unevaluated.
+- **Local harmonic synthesis** (FES2014 + a constituent solver) — rejected for
+  now: it trades a network call for a dependency, a bundle of coefficients and
+  a correctness argument we do not need while the Marine Institute publishes
+  gauge-derived predictions for the waters we care about.
+
+## Architecture
+
+Two layers, and the seam between them is the thing to protect:
+
+1. **Sources** (`js/sources.js`) — one adapter per provider. An adapter takes a
+   point and a time window and returns the same normalised shape, in UTC, with
+   provenance attached: `{ source, station, datum, latitude, longitude,
+   distanceKm, kind: "gauge" | "model" | "global-model", series[], extremes[],
+   currents?, surge?, fetchedAt }`. Nothing above this layer knows what ERDDAP
+   is, what an ERDDAP constraint looks like, or that Open-Meteo exists.
+2. **Derivation** (`js/tide.js`) — pure functions over that shape: nearest
+   station, rising/falling and rate, minutes to the next turn, range, springs
+   or neaps, flood/ebb labelling. No network, no DOM, no clock of its own.
+3. **Presentation** (`index.html`, `js/app.js`) — reads the two above and draws.
+
+Rules that keep the seam honest:
+
+- **`js/tide.js` and `js/sources.js` must be DOM-free** — no `document`, no
+  `window` at module scope — because they are the two files unit-tested in Node.
+  Anything that needs the DOM belongs in `js/app.js`.
+- **Nothing is guessed.** If a value is not in the data, the interface says
+  "not available for this place" rather than estimating it. Weather-driven
+  surge is the worked example: it is shown when
+  `imiSurgeObservationINTGN`/`imiSurgePrediction` covers the station, and
+  otherwise the interface says that the prediction excludes surge.
+- **Every number carries its provenance** to the screen: which source, which
+  station, how far away, what datum, and when it was fetched.
+
+## Requirements
+
+Numbered, as agreed, so a later change can be checked against them.
+
+1. Enter a location as a place name or as latitude/longitude. A name is
+   geocoded live; a coordinate is used as given.
+2. Resolve the point to the **nearest prediction station**, and show its name,
+   its coordinates and the distance from the point asked about.
+3. Warn — prominently, not subtly — when the nearest station is further than a
+   documented threshold (`MAX_STATION_DISTANCE_KM`, **25 km**), and never
+   silently present a distant station as local.
+4. Show the tide as both **the turns** (`IMI_TidePrediction_HighLow`: next high
+   and next low, with times and heights) and **the curve** (`imiTidePrediction`,
+   5-minute), so the next few hours can be read at a glance.
+5. Derive and show the state: **rising or falling**, the **rate in m/h** at the
+   current moment, and **time remaining to the next high and the next low**.
+6. Choose the **datum explicitly** — chart datum (LAT, `Water_Level`) by
+   default, OD Malin (`Water_Level_ODM`) available — and print which one is in
+   use next to the figures.
+7. Show **spring or neap**, and the date of the next spring tide, by inference
+   from the predicted range, labelled as an inference (see *Springs and neaps*).
+8. Show **modelled current** speed and compass direction for the point
+   (Open-Meteo Marine; `IMI_NEATL` for Irish waters when a gridded subset is
+   wanted), labelled with the model's resolution and the word "model".
+9. Show **surge separately** where the Marine Institute publishes it, so it is
+   visible that the prediction excludes it and by how much the two differ.
+10. Fall back to the **global model** (Open-Meteo Marine) when the point is
+    outside the 38 Irish stations (`GLOBAL_MODEL_FALLBACK_KM`, **100 km**, in
+    `js/app.js`), and say that this is what happened.
+11. **All times in the location's own timezone**, taken from the geocoder, with
+    the offset and the abbreviation shown; the data itself is UTC and stays UTC
+    until the moment of display.
+12. **Work offline for the app shell**, and show the last fetched prediction
+    with a visible "as of" timestamp rather than a silent stale number.
+13. **Attribute** Marine Institute (CC-BY 4.0), Open-Meteo and GeoNames in the
+    interface, not only in this file.
+14. **State the limits**: not for navigation, predictions exclude surge, model
+    currents are model currents.
+15. **Fail visibly.** A source that is down, a point with no station within a
+    sane distance, a request outside the published prediction window — each is
+    a sentence on the screen, not an empty chart.
+
+## Springs and neaps — how, and why not the textbook way
+
+The textbook definition uses the **form factor** $F=(K_1+O_1)/(M_2+S_2)$ from
+the station's harmonic constituents. Marine Institute publishes pre-computed
+prediction series, not constituents (verified above), so $F$ is not available
+to us without requesting the data separately.
+
+What we do instead, and label as such: take the predicted **range** of each
+successive high–low pair over a rolling fortnight, compare each day's range with
+the mean of that window, and call it springs near the local maximum, neaps near
+the local minimum. That is defensible, reproducible from the data we already
+have, and it can name the date of the next spring tide — but it is an inference
+about the range, not a calculation of the form factor, and `docs/derivations.md`
+must say so in exactly those terms, with the `F`-factor definition recorded as
+the alternative we chose not to use.
+
+## Deliverable shape — a PWA, and why not the usual single file
+
+The house rule prefers single-file scripts with embedded assets. A PWA cannot be
+one file, and the reason is structural rather than aesthetic: a service worker
+must be a separate script at its own URL, and the manifest is a separate JSON
+document by specification. So the override is deliberate:
+
+- `index.html` keeps the CSS inline (one file, one style block).
+- The JavaScript is split by the seam above — three small ES modules — because
+  the two testable ones must import cleanly into Node, which they could not do
+  from inside an HTML file.
+- Everything else stays as close to "one file" as the platform allows: no
+  bundler, no framework, no build step, no `node_modules` at run time.
+
+Two platform traps to remember, both of which cost an afternoon if forgotten:
+
+- **A service worker needs a secure context.** `http://localhost` counts;
+  `http://192.168.x.x` from the phone does **not**. So the phone tests against
+  an HTTPS origin (GitHub Pages, `file://` will not do) — a local dev server is
+  for the desk, not the pocket.
+- **iOS has no install prompt.** `beforeinstallprompt` does not exist there;
+  installing is Share → *Add to Home Screen*, and the interface has to say so
+  in words rather than showing a button that never appears.
+
+## Layout
+
+| Path | What it is |
+| --- | --- |
+| `index.html` | The app shell — markup, inline CSS, module entry. |
+| `js/sources.js` | Source adapters; the only place that knows a provider's URL shape. DOM-free, unit-tested. |
+| `js/tide.js` | Pure derivations: nearest station, rate, next turn, range, springs/neaps. DOM-free, unit-tested. |
+| `js/app.js` | DOM, rendering, install prompt, offline banner. |
+| `sw.js` | Service worker: app shell cache, and a short-TTL cache for API responses. |
+| `manifest.webmanifest` | Name, icons, colours, `display: standalone`. |
+| `icons/` | `icon.svg` source plus generated PNG sizes; generated, not drawn by hand. |
+| `data/stations.json` | Vendored snapshot of the 38 prediction stations: `{ id, name, latitude, longitude, kind }`, with the regeneration command and date in its header. |
+| `data/station-map.json` | The name mapping between the three spellings: `{ prediction, gauge, surge }` per station. Hand-checked, not guessed. |
+| `tools/refresh-stations.sh` | Regenerates `data/stations.json` from ERDDAP (`curl` + `jq`). |
+| `tools/make-icons.sh` | Rasterises `icons/icon.svg` with ImageMagick. |
+| `test/` | `node --test` units for `js/tide.js` and `js/sources.js`, with recorded fixtures. |
+| `docs/data-sources.md` | The source contract: endpoints, variables, datums, licences, sample responses. |
+| `docs/derivations.md` | The formulas, including springs/neaps and why not the form factor. |
+| `README.md` | What it is, how to run it, how to install it on a phone. |
+| `LICENSE` | MIT. |
+
+## Commands
+
+Nothing in the layout exists yet; these are the commands that file layout fixes,
+and they are recorded here so the first commit can use them without invention.
+
+| Task | Command |
+| --- | --- |
+| Run locally | `python3 -m http.server 8000` then open `http://localhost:8000` |
+| Unit tests | `npm test` (which is `node --test`, no dependencies) |
+| Refresh station list | `./tools/refresh-stations.sh` |
+| Regenerate icons | `./tools/make-icons.sh` |
+| Check a source by hand | see the recorded queries under *Data sources* above |
+
+`package.json` exists only to set `"type": "module"` and the test script. It
+declares **no dependencies**; if it ever grows one, that is a decision to record
+here in the same commit.
+
+## Technology Stack
+
+Update this section in the same commit that adds or upgrades a dependency.
+
+### HTML and CSS (vanilla)
+
+- **Role**: the app shell and all styling; no framework, no preprocessor.
+- **Version**: whatever Safari and Chrome shipped this year; no pinning, and no
+  feature we cannot see working on the phone in hand.
+- **Best Practices**:
+  - Phone-first: readable at arm's length, outdoors, one-handed. Large type for
+    the two numbers that matter (height now, and time to the next turn).
+  - One stylesheet, inline in `index.html`, per the house preference.
+  - `prefers-color-scheme` respected; the display is looked at on a dark quay.
+- **Docs**: <https://developer.mozilla.org/en-US/docs/Web/CSS>
+
+### JavaScript (ES modules, no bundler)
+
+- **Role**: everything that runs; the app is three ES modules plus a worker.
+- **Version**: ES2022 baseline (`fetch`, `Intl`, optional chaining, top-level
+  `await` in modules). No transpiler, so no syntax that the target browsers
+  cannot parse.
+- **Best Practices**:
+  - `js/tide.js` and `js/sources.js` stay DOM-free and dependency-free so Node
+    can import and test them directly.
+  - Time is handled with `Intl.DateTimeFormat` and IANA names from the geocoder.
+    Never hand-roll an offset, and never store a local time without its zone.
+  - Abort in-flight requests when the location changes; a slow answer for the
+    previous station must not paint over the current one.
+- **Docs**: <https://developer.mozilla.org/en-US/docs/Web/JavaScript>
+
+### Web App Manifest and Service Worker (PWA)
+
+- **Role**: installability on the phone and offline availability of the shell.
+- **Version**: manifest served as `application/manifest+json`; service worker
+  with a documented cache strategy rather than a stale-forever one.
+- **Best Practices**:
+  - Cache the shell (cache-first); cache API responses network-first with a
+    short TTL and an explicit "fetched at" stamp shown in the interface.
+  - Bump the cache name when the shell changes, and delete old caches on
+    `activate`.
+  - Service worker only over HTTPS or `localhost` — see *Deliverable shape*.
+  - Provide `192`, `512` and a `purpose: maskable` icon; iOS additionally wants
+    `apple-touch-icon`.
+- **Docs**:
+  <https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps> ·
+  <https://web.dev/learn/pwa/service-workers/>
+
+### Marine Institute ERDDAP (primary data source)
+
+- **Role**: Irish tide predictions, high/low turns, surge split, gauge
+  observations.
+- **Version**: ERDDAP 2.14 at `erddap.marine.ie`; dataset IDs are pinned
+  (`IMI_TidePrediction_HighLow`, `imiTidePrediction`, `imiSurgePrediction`,
+  `imiSurgeObservationINTGN`, `IrishNationalTideGaugeNetwork`).
+- **Best Practices**:
+  - Ask for the exact variables and the exact time window; the gauge datasets
+    are large and an unbounded query returns nothing useful.
+  - Read the returned series' own extent rather than assuming coverage.
+  - Use `.json` for the app and `.csv`/`.das` when investigating by hand.
+  - Attribution "Marine Institute" (CC-BY 4.0) on screen.
+  - A deprecated dataset exists beside every current one (`IMI-TidePrediction`,
+    `IMI-TidePrediction_epa`, "to be replaced" in their titles): always take the
+    current ID, never the one next to it.
+- **Docs**: <https://erddap.marine.ie/erddap/index.html> ·
+  <https://erddap.marine.ie/erddap/tabledap/documentation.html> ·
+  <https://www.marine.ie/site-area/data-services/real-time-observations/tidal-predictions>
+
+### Open-Meteo Marine API (fallback tide, modelled currents)
+
+- **Role**: tide and current for points outside the Irish station set, and the
+  modelled current over Irish waters.
+- **Version**: `/v1/marine`: `sea_level_height_msl`, `ocean_current_velocity`,
+  `ocean_current_direction`; Météo-France SMOC, 0.08° (~8 km), hourly, ~10-day.
+- **Best Practices**:
+  - Free tier is **non-commercial and under 10,000 calls/day** — cache rather
+    than re-request on every view, and revisit before any public deployment.
+  - Use the response's own `latitude`/`longitude` as *the model grid point* and
+    display the offset from the requested point; do not pretend it is exact.
+  - `sea_level_height_msl` is referenced to global mean sea level, **not** LAT —
+    it is a different thing from a chart datum, and the interface says so.
+  - Show `sea_level_height_msl` as a shape and a state (rising/falling, time to
+    turn) rather than as a navigational height.
+- **Docs**: <https://open-meteo.com/en/docs/marine-weather-api> ·
+  <https://open-meteo.com/en/licence>
+
+### Open-Meteo Geocoding API
+
+- **Role**: place name → coordinates, timezone, and country.
+- **Version**: `/v1/search`, GeoNames-derived.
+- **Best Practices**:
+  - Send `count` and `language`, prefer results with `country_code = "IE"` when
+    fishing near Ireland, but **show the alternatives** rather than silently
+    picking one — "Galway" also matches a town in Tennessee (verified).
+  - Take `timezone` from this response; do not infer it from longitude.
+  - Attribute GeoNames/Open-Meteo (CC-BY 4.0).
+- **Docs**: <https://open-meteo.com/en/docs/geocoding-api>
+
+### Node.js (development only)
+
+- **Role**: the test runner (`node --test` with `node:assert`). Nothing at run
+  time depends on Node.
+- **Version**: v22.22.0 is what is installed here; the built-in test runner
+  needs nothing beyond it.
+- **Best Practices**: keep tests dependency-free, and keep fixtures as recorded
+  real responses (trimmed) so a source changing shape fails a test rather than
+  the app.
+- **Docs**: <https://nodejs.org/api/test.html>
+
+### Python 3 (development only)
+
+- **Role**: `python3 -m http.server` for a local origin.
+- **Version**: 3.14.6 here; any 3.x with `http.server` will do.
+- **Best Practices**: local dev only. It writes nothing, so it leaves no cache
+  directories to ignore — and remember it is not a secure context for anything
+  but `localhost`.
+- **Docs**: <https://docs.python.org/3/library/http.server.html>
+
+### ImageMagick (`magick`) — development only
+
+- **Role**: rasterising `icons/icon.svg` into the PNG sizes the manifest and iOS
+  need.
+- **Version**: 7.1.1-34 here, called as `magick`.
+- **Best Practices**:
+  - **`-background none` goes *before* the input file.** After it, transparent
+    areas are silently filled opaque white, which puts a white square behind a
+    rounded icon. Verify with
+    `magick -background none f.svg -format '%[pixel:p{2,2}] %[fx:minima.a]' info:`
+    (corner pixel must be `srgba(0,0,0,0)`).
+  - This build has **no librsvg delegate**, so its internal renderer drops
+    gradients and dashes. Keep `icon.svg` flat — solid fills, no gradients, no
+    dashes, no filters — and the PNG matches a browser rendering to ~1.7 % RMSE.
+    Do not reach for a browser screenshot for flat art.
+- **Docs**: <https://imagemagick.org/Usage/>
+
+### Shell, `curl` and `jq` (development only)
+
+- **Role**: `tools/refresh-stations.sh` — fetch the station list from ERDDAP and
+  write `data/stations.json`.
+- **Version**: `jq` 1.7.1 here; the script must check for both and say what is
+  missing rather than writing a broken file.
+- **Best Practices**: write to a temporary file and move it into place; record
+  the generation date and the exact URL in the JSON header; never let a failed
+  fetch truncate the committed snapshot.
+- **Docs**: <https://stedolan.github.io/jq/manual/> ·
+  <https://erddap.marine.ie/erddap/tabledap/documentation.html>
+
+## Keeping `.gitignore` current — required
+
+`.gitignore` is part of a change, never a follow-up to it. When a change creates
+files that should not be committed, the patterns go in **the same commit** — a
+cached response committed by accident is much harder to remove than a line is
+to add.
+
+Keep current, at minimum, for this project:
+
+- **Tool and dependency output**: `node_modules/` and npm logs (present even
+  though we declare no dependencies), plus any cache directory a tool invents.
+- **Local state**: `.env`, `*.env`, `.env.local` — unused today, but the moment
+  a keyed source (WorldTides, Stormglass, UKHO) is tried, its key lives here and
+  never in the repository. Also `*.log`.
+- **Editor and OS metadata**: `.DS_Store`, `*.swp`.
+
+Rules and the two traps this project has specifically:
+
+- **`data/stations.json` and `data/station-map.json` are source.** They are
+  vendored snapshots the app needs at run time, so they are committed — a
+  blanket `*.json` or `data/` ignore would break the app, which is exactly the
+  failure the house rules warn about.
+- **Do not ignore `.vscode/` wholesale.** Ignore the specific local artefacts
+  inside it instead; a shared `launch.json` or `tasks.json` is useful here and
+  an un-ignore rule added later is confusing.
+- No Python ignore patterns: the only Python in the project is `python3 -m
+  http.server`, which writes nothing. If a `tools/*.py` ever lands, add
+  `__pycache__/` and `*.py[cod]` in that same commit.
+- Prefer official patterns (npm's own `.gitignore` template) over invented ones.
+
+## Project rules
+
+- **Never present an inference as a measurement.** Springs/neaps, "the tide is
+  flooding", a current direction: each is derived or modelled, and the interface
+  says which. `docs/derivations.md` carries the formula for each.
+- **Distance and datum are always visible.** A height without its datum, or a
+  station without its distance, is a number a user cannot act on.
+- **Rounding is a presentation decision, made once**: heights to 0.1 m, times to
+  the minute, rates to 0.1 m/h, distances to 1 km. Do not round twice.
+- **UTC in, local out.** Sources are UTC; `Intl` with the geocoded IANA zone
+  does the conversion at render time, and nothing stores a naive local time.
+- **Provenance travels with the number** — source, station, distance, datum,
+  fetch time — so no screen can show a value whose origin is unknowable.
+- **A new region is a new adapter**, plus fixtures and tests, and a line in
+  *Data sources*. The UI must not need to change.
+- **Verification is part of the change.** Run `npm test`, load the page in the
+  browser, exercise the changed path against the live source, and put the
+  outcome in the commit body. "It should work" is not a result.
+- **Update this file in the same commit** that adds a source or a dependency,
+  with rationale, Best Practices and docs links; add the `.gitignore` patterns
+  at the same time.
+
+## Commit conventions
+
+- Imperative sentences, no conventional-commit prefix: "Add the Marine
+  Institute high/low adapter".
+- The subject says what changed; the body says **why**, and records the trap
+  avoided or the measurement that justified the choice — the datum
+  confusion, the `altitude` dummy, the station-key mismatch.
+- One logical change per commit.
+- Record the source verification in the body when the change touches an
+  adapter: the URL called and what came back.
+
+## AI attribution — required
+
+Any commit produced with an AI coding assistant — for the code, the docs, the
+artwork, or the commit message itself — must end with a trailer naming the
+assistant **and** the exact model and version:
+
+```
+Assisted-by: <assistant> (<model> <version>)
+```
+
+```
+Assisted-by: GitHub Copilot (DeepSeek V4 Flash)
+```
+
+Rules:
+
+- Name the model you were actually running, and its version when it has one.
+  "AI", "Copilot", "an LLM" or a bare tool name is not attribution.
+- One trailer per assistant: two assistants on one commit means two
+  `Assisted-by:` trailers.
+- Use `git commit --trailer "Assisted-by=GitHub Copilot (DeepSeek V4 Flash)"`
+  rather than hand-placing the line, so it lands in the trailer block.
+- No trailer means the work was written by hand. Never add one for a change you
+  did not make.
+
+### Elsewhere, not only in commits
+
+- **Documents and prose** substantially written by an assistant — this file,
+  `README.md`, `docs/derivations.md` — carry the assistant, model and version,
+  as a note in the document or in a short "AI contributions" list.
+- **Release notes, tags and pull-request descriptions** written with an
+  assistant end with the same `Assisted-by:` trailer.
+- **Generated artefacts** that are committed (icon PNGs, recorded fixtures)
+  record in their header, or in the command that regenerates them, which tooling
+  and which assistant produced them, so the result can be reproduced.
+
+When in doubt, attribute. An unnecessary trailer costs a line; a missing one
+misrepresents who wrote the work.
+
+## General house rules
+
+These apply to every home project unless a project has a reason to override one.
+
+- **License**: MIT, in `LICENSE`. Nothing here links GPL tooling — ImageMagick
+  is used at development time only and is permissively licensed — so the AGPL
+  exception for `videos` does not apply. The *data* keeps its own licence
+  (Marine Institute CC-BY 4.0, Open-Meteo/GeoNames CC-BY 4.0) and attribution is
+  shown in the interface regardless of the code licence.
+- **README**: says what the project is, how to run it locally, and how to get it
+  onto a phone.
+- **Install**: if a CLI ever appears, it installs through an idempotent
+  `install.sh` symlinking into `$HOME/bin`, warning when `$HOME/bin` is not on
+  `PATH` (zsh). The first version is a web app and needs none.
+- **Prefer self-contained, low-dependency tooling**: no build step, no framework,
+  no run-time dependency, and the deliberate single-file override explained
+  under *Deliverable shape*.
+- **Verify before claiming done**: run the tests, load the page, call the source,
+  and record the outcome in the commit body.
+- **Keep this file current**: a change that introduces a language, library or
+  dependency updates `AGENTS.md` and `.gitignore` in the same commit.
+
+<!--
+This file was written with an AI coding assistant, and updated with one in
+2026-10-04 when the first implementation landed.
+Assisted-by: GitHub Copilot (DeepSeek V4 Flash)
+Assisted-by: GitHub Copilot (DeepSeek V4 Pro)
+-->
