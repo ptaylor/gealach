@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b6bcb" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)" />
+  <meta name="description" content="What the sea is doing at a coastal place: tide height and state now, the next high and low, the range, and the modelled current." />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icons/icon-180.png" />
+  <title>taoidí — tides</title>
+  <style>
+    :root {
+      --bg: #f5f6f8;
+      --fg: #1b1e24;
+      --muted: #5c6470;
+      --accent: #0b6bcb;
+      --card: #ffffff;
+      --border: #dde1e7;
+      --warn: #b45309;
+      --warn-bg: #fef3c7;
+      --ok: #166534;
+      --bad: #b91c1c;
+      --grid: #e8ecf1;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f1115;
+        --fg: #e7e9ee;
+        --muted: #9aa2ae;
+        --accent: #5aa7ff;
+        --card: #181b21;
+        --border: #2a303b;
+        --warn: #fbbf24;
+        --warn-bg: #3a2f10;
+        --ok: #4ade80;
+        --bad: #f87171;
+        --grid: #222834;
+      }
+    }
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font: 17px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: env(safe-area-inset-top) 16px calc(24px + env(safe-area-inset-bottom));
+    }
+    main { max-width: 34rem; margin: 0 auto; }
+    header h1 { font-size: 2rem; margin: 0.5rem 0 0; }
+    .tagline { color: var(--muted); margin: 0 0 1rem; }
+
+    form { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
+    input[type="search"] {
+      flex: 1; font-size: 1.05rem; padding: 0.7rem 0.85rem;
+      border: 1px solid var(--border); border-radius: 10px;
+      background: var(--card); color: var(--fg);
+    }
+    button {
+      font-size: 1.05rem; font-weight: 600; padding: 0.7rem 1.1rem;
+      border: 0; border-radius: 10px; background: var(--accent); color: #fff;
+    }
+    button:active { opacity: 0.85; }
+
+    .choices { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.75rem; }
+    .choices button {
+      background: var(--card); color: var(--fg); border: 1px solid var(--border);
+      font-weight: 400; font-size: 0.9rem; padding: 0.4rem 0.7rem;
+    }
+    .choices button.picked { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+
+    .status { color: var(--muted); margin: 0.5rem 0; }
+    .warning {
+      background: var(--warn-bg); color: var(--warn);
+      border-radius: 10px; padding: 0.6rem 0.8rem; margin: 0.5rem 0; font-weight: 600;
+    }
+
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 0.9rem 1rem; margin-bottom: 0.75rem;
+    }
+    .card h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0 0 0.5rem; }
+
+    .now { text-align: center; }
+    .datum-row { display: flex; justify-content: center; gap: 0.5rem; align-items: baseline; flex-wrap: wrap; }
+    .datum-row .dat { color: var(--muted); font-size: 0.85rem; }
+    .big { font-size: 4.2rem; font-weight: 700; line-height: 1.05; font-variant-numeric: tabular-nums; }
+    .big .unit { font-size: 1.4rem; font-weight: 400; color: var(--muted); }
+    .state { font-size: 1.1rem; margin-top: 0.2rem; }
+    .state .rising { color: var(--accent); }
+    .state .falling { color: var(--warn); }
+
+    .turn-row { display: flex; justify-content: space-between; padding: 0.35rem 0; border-bottom: 1px solid var(--grid); }
+    .turn-row:last-child { border-bottom: 0; }
+    .turn-row .kind { color: var(--muted); }
+    .turn-row .time { font-variant-numeric: tabular-nums; }
+    .turn-row .height { font-variant-numeric: tabular-nums; font-weight: 600; }
+
+    svg#curve { width: 100%; height: auto; display: block; }
+    .curve-line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; }
+    .curve-now { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
+    .curve-label { fill: var(--muted); font-size: 10px; }
+
+    .current-big { font-size: 2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .provenance { font-size: 0.85rem; }
+    footer { margin-top: 1rem; font-size: 0.85rem; }
+    footer .notice { color: var(--muted); border-top: 1px solid var(--border); padding-top: 0.6rem; }
+    .muted { color: var(--muted); }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>taoidí</h1>
+      <p class="tagline">What the sea is doing at a coastal place.</p>
+    </header>
+
+    <form id="search" role="search">
+      <input id="q" type="search" inputmode="search" autocomplete="off"
+             placeholder="Place name, or 53.27, -9.05" aria-label="Place name or coordinates" />
+      <button type="submit">Tide</button>
+    </form>
+
+    <div id="choices" class="choices hidden" aria-label="Matching places"></div>
+    <div id="offline" class="warning hidden">Offline — showing the last fetched prediction.</div>
+    <p id="status" class="status hidden" role="status"></p>
+
+    <section id="result" class="hidden">
+      <div id="where" class="card" style="font-size:1.05rem"></div>
+      <div id="warning" class="warning hidden"></div>
+
+      <div class="card now">
+        <div class="datum-row">
+          <span id="datum-label" class="dat"></span>
+          <button id="datum-toggle" class="hidden" type="button"></button>
+        </div>
+        <div class="big"><span id="height-now">—</span><span class="unit"> m</span></div>
+        <div id="state-now" class="state"></div>
+      </div>
+
+      <div class="card">
+        <h2>Next turns</h2>
+        <div id="turns"></div>
+      </div>
+
+      <div class="card">
+        <h2>Springs / neaps</h2>
+        <div id="springs"></div>
+      </div>
+
+      <div class="card">
+        <h2>Next few hours</h2>
+        <svg id="curve" viewBox="0 0 360 130" role="img" aria-label="Tide curve"></svg>
+        <p id="curve-note" class="muted" style="margin-bottom:0"></p>
+      </div>
+
+      <div class="card hidden" id="currents-card">
+        <h2>Current — model output</h2>
+        <div id="currents"></div>
+      </div>
+
+      <div class="card hidden" id="surge-card">
+        <h2>Surge — observed, separate from the prediction</h2>
+        <div id="surge"></div>
+      </div>
+
+      <div id="provenance" class="muted provenance"></div>
+    </section>
+
+    <footer>
+      <p id="attribution" class="muted"></p>
+      <p class="notice">Not for navigation. Predictions exclude storm surge. Modelled currents are model output, not observations.</p>
+    </footer>
+  </main>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
