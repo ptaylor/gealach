@@ -1,0 +1,10 @@
+{
+  "table": {
+    "columnNames": ["stationID", "time", "sea_surface_elevation_due_to_tide", "sea_surface_elevation_due_to_storm_surge"],
+    "columnTypes": ["String", "String", "double", "double"],
+    "rows": [
+      ["Galway", "2026-09-30T00:00:00Z", -2.141, 0.392],
+      ["Galway", "2026-09-30T00:15:00Z", -2.18, 0.39]
+    ]
+  }
+}

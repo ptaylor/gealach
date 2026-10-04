@@ -1,0 +1,16 @@
+{
+  "table": {
+    "columnNames": ["stationID", "time", "tide_time_category", "Water_Level_ODMalin"],
+    "columnTypes": ["String", "String", "String", "double"],
+    "rows": [
+      ["Galway", "2026-09-30T00:35:00Z", "LOW", -2.274],
+      ["Galway", "2026-09-30T07:00:00Z", "HIGH", 2.235],
+      ["Galway", "2026-09-30T13:10:00Z", "LOW", -2.101],
+      ["Galway", "2026-09-30T19:25:00Z", "HIGH", 2.301],
+      ["Galway", "2026-10-01T01:15:00Z", "LOW", -2.402],
+      ["Galway", "2026-10-01T07:40:00Z", "HIGH", 2.403],
+      ["Galway", "2026-10-01T13:50:00Z", "LOW", -2.230],
+      ["Galway", "2026-10-01T20:05:00Z", "HIGH", 2.305]
+    ]
+  }
+}
