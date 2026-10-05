@@ -702,12 +702,12 @@ function isFavourited(point) {
 function renderHeart() {
   const btn = $("heart");
   if (!currentPoint) {
-    btn.classList.add("hidden");
+    btn.hidden = true;
     return;
   }
-  btn.classList.remove("hidden");
+  btn.hidden = false;
   const saved = isFavourited(currentPoint);
-  btn.textContent = saved ? "♥" : "♡";
+  btn.textContent = saved ? "♥ Saved" : "♡ Save";
   btn.classList.toggle("saved", saved);
   btn.setAttribute("aria-label", saved ? "Remove from favourites" : "Save to favourites");
 }
@@ -738,7 +738,7 @@ function renderFavourites() {
   if (!favourites.length) {
     const li = document.createElement("li");
     li.className = "fave-empty";
-    li.textContent = "No favourites yet — tap the ♡ on a result to save it.";
+    li.textContent = "No favourites yet — search for a place, then tap ♡ Save.";
     list.appendChild(li);
     return;
   }
