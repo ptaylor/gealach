@@ -1,4 +1,4 @@
-<img src="icons/icon-180.png" alt="taoidí icon" width="96" align="right" />
+<img src="icons/icon-512.png" alt="taoidí icon" width="96" align="right" />
 
 # taoidí — tides
 
