@@ -707,7 +707,7 @@ function renderHeart() {
   }
   btn.hidden = false;
   const saved = isFavourited(currentPoint);
-  btn.textContent = saved ? "♥ Saved" : "♡ Save";
+  btn.textContent = saved ? "♥" : "♡";
   btn.classList.toggle("saved", saved);
   btn.setAttribute("aria-label", saved ? "Remove from favourites" : "Save to favourites");
 }
@@ -738,7 +738,7 @@ function renderFavourites() {
   if (!favourites.length) {
     const li = document.createElement("li");
     li.className = "fave-empty";
-    li.textContent = "No favourites yet — search for a place, then tap ♡ Save.";
+    li.textContent = "No favourites yet — search for a place, then tap ♡.";
     list.appendChild(li);
     return;
   }

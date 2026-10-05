@@ -27,7 +27,6 @@
       --grid: #e8ecf1;
       --moon: #d7dde5;
       --moon-lit: #f0c75e;
-      --heart: #e11d48;
       --brand-silver: #b9c0cc;
       --brand-blue: #0b6bcb;
     }
@@ -88,8 +87,8 @@
 
     .where-row { display: flex; align-items: flex-start; gap: 0.6rem; }
     .where-row #where-text { flex: 1; }
-    .heart { flex: none; background: var(--card); border: 1px solid var(--border); border-radius: 999px; font-size: 1rem; font-weight: 600; color: var(--accent); padding: 0.4rem 0.8rem; cursor: pointer; white-space: nowrap; }
-    .heart.saved { color: var(--heart); border-color: var(--heart); }
+    .heart { flex: none; background: var(--card); border: 1px solid var(--border); border-radius: 999px; font-size: 1.15rem; line-height: 1; color: var(--moon-lit); padding: 0.45rem 0.75rem; cursor: pointer; white-space: nowrap; }
+    .heart.saved { color: var(--moon-lit); border-color: var(--moon-lit); }
 
     .faves { list-style: none; margin: 0; padding: 0; }
     .faves li { display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0; border-bottom: 1px solid var(--grid); }
@@ -99,7 +98,7 @@
     .fave-name { font-weight: 600; }
     .fave-sub { font-size: 0.8rem; color: var(--muted); }
     .fave-rename, .fave-remove { background: none; border: none; color: var(--muted); font-size: 1.1rem; padding: 0.2rem 0.3rem; cursor: pointer; }
-    .fave-remove.saved { color: var(--heart); }
+    .fave-remove.saved { color: var(--moon-lit); }
     .fave-input { flex: 1; font-size: 1rem; padding: 0.3rem 0.5rem; border: 1px solid var(--accent); border-radius: 6px; background: var(--card); color: var(--fg); }
 
     .choices { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.75rem; }
@@ -195,7 +194,7 @@
       <div id="where" class="card">
         <div class="where-row">
           <div id="where-text" style="font-size:1.05rem"></div>
-          <button id="heart" class="heart" type="button" aria-label="Save to favourites" hidden>♡ Save</button>
+          <button id="heart" class="heart" type="button" aria-label="Save to favourites" hidden>♡</button>
         </div>
       </div>
       <div id="warning" class="warning hidden"></div>
