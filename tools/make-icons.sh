@@ -13,11 +13,13 @@ mkdir -p icons
 # -background none must come BEFORE the input file, or transparency is lost
 # and a white square appears behind the rounded icon. The maskable/apple-touch
 # variant carries its own full-bleed ground and must stay opaque (iOS renders
-# transparent apple-touch icons as black).
-magick -background none icons/icon.svg          -resize 512x512 icons/icon-512.png
-magick -background none icons/icon.svg          -resize 192x192 icons/icon-192.png
-magick -background none icons/icon-maskable.svg -resize 180x180 icons/icon-180.png
-magick -background none icons/icon-maskable.svg -resize 512x512 icons/icon-512-maskable.png
+# transparent apple-touch icons as black). -strip drops the date:create/
+# date:modify timestamps ImageMagick embeds, so the output is deterministic
+# and re-running the script never churns git with identical-looking PNGs.
+magick -background none icons/icon.svg          -strip -resize 512x512 icons/icon-512.png
+magick -background none icons/icon.svg          -strip -resize 192x192 icons/icon-192.png
+magick -background none icons/icon-maskable.svg -strip -resize 180x180 icons/icon-180.png
+magick -background none icons/icon-maskable.svg -strip -resize 512x512 icons/icon-512-maskable.png
 
 # Verify transparency survived on the rounded icon: the corner must be
 # srgba(0,0,0,0) and the minimum alpha must be 0.
