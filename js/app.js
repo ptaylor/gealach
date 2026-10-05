@@ -549,6 +549,7 @@ function renderMoon() {
   $("moon-glyph").innerHTML = moonGlyph(phase);
   $("moon-name").textContent = phase.name;
   $("moon-detail").textContent =
+    `${phase.waxing ? "Waxing" : "Waning"} · ` +
     `${Math.round(phase.illuminated * 100)}% illuminated · ` +
     `${phase.ageDays.toFixed(1)} days old`;
 }

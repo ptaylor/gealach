@@ -239,8 +239,8 @@ const PHASE_NAMES = [
  * The phase of the Moon at a moment, from the synodic month since a reference
  * new moon. `fraction` runs 0 (new) → 0.5 (full) → 1 (new again);
  * `illuminated` is the fraction of the disc lit (0..1); `ageDays` is the age
- * of the Moon in days since the last new moon. This is a phase approximation,
- * not a navigation ephemeris.
+ * of the Moon in days since the last new moon; `waxing` is true before full,
+ * false after. This is a phase approximation, not a navigation ephemeris.
  */
 export function lunarPhase(now = new Date()) {
   const t = new Date(now).getTime();
@@ -254,6 +254,7 @@ export function lunarPhase(now = new Date()) {
     illuminated,
     ageDays: ageMs / 86400000,
     name: PHASE_NAMES[Math.round(fraction * 8) % 8],
+    waxing: fraction < 0.5,
   };
 }
 

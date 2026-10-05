@@ -127,6 +127,11 @@ test("lunarPhase names the quarters across a synodic month", () => {
   assert.equal(lunarPhase("2000-01-28T21:47:00Z").name, "Last quarter");
 });
 
+test("lunarPhase reports waxing before full and waning after", () => {
+  assert.equal(lunarPhase("2000-01-14T03:25:00Z").waxing, true);
+  assert.equal(lunarPhase("2000-01-28T21:47:00Z").waxing, false);
+});
+
 // One high and one low per day, range following a ~14.8-day spring/neap cycle
 // around a 4.0 m mean with 1.5 m amplitude.
 function synthExtremes(days) {
