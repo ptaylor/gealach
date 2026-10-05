@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Publish taoidí to GitHub Pages.
+# Publish Gealach to GitHub Pages.
 #
 # This repo is already a static site at the repo root — there is no build step,
 # no version injection and no output directory, so "publishing" is just a

@@ -1,6 +1,6 @@
 {
-  "name": "taoidí — tides",
-  "short_name": "taoidí",
+  "name": "Gealach — tides",
+  "short_name": "Gealach",
   "description": "What the sea is doing at a coastal place: tide height and state now, the next high and low, the range, and the modelled current.",
   "start_url": "./",
   "scope": "./",

@@ -1,6 +1,6 @@
-<p align="center"><img src="icons/icon-512.png" alt="taoidí icon" width="96" /></p>
+<p align="center"><img src="icons/icon-512.png" alt="Gealach icon" width="96" /></p>
 
-# taoidí — tides
+# Gealach — tides
 
 What the sea is doing at a coastal place, on a phone in a pocket: the tide's
 height and state now, when it turns, what the range is, whether we are on

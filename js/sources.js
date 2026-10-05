@@ -56,12 +56,12 @@ async function fetchJson(url, signal) {
   return { data, fetchedAt: fetchTime(res) };
 }
 
-// When the service worker serves a cached response it stamps x-taoidi-fetched;
+// When the service worker serves a cached response it stamps x-gealach-fetched;
 // otherwise the Date header is the fetch time. Falling back to "now" keeps the
 // shape complete when neither header exists.
 function fetchTime(res) {
   const raw =
-    res.headers.get("x-taoidi-fetched") ||
+    res.headers.get("x-gealach-fetched") ||
     res.headers.get("date") ||
     new Date().toUTCString();
   const ms = Date.parse(raw);
@@ -401,7 +401,7 @@ export async function noaaPredictions(
   const finish = String(end).replace(/-/g, "").slice(0, 8);
   const params = new URLSearchParams({
     product: "predictions",
-    application: "taoidi",
+    application: "gealach",
     begin_date: begin,
     end_date: finish,
     datum,

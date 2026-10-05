@@ -2,14 +2,14 @@
 //
 // Service worker: cache the app shell (cache-first) and API responses
 // (network-first with a short TTL). Every cached API response carries an
-// "x-taoidi-fetched" header so the UI can show an honest "as of" timestamp
+// "x-gealach-fetched" header so the UI can show an honest "as of" timestamp
 // instead of a silently stale number.
 //
 // A service worker only runs over HTTPS or localhost — see AGENTS.md.
 
 const VERSION = "v2";
-const SHELL_CACHE = `taoidi-shell-${VERSION}`;
-const API_CACHE = `taoidi-api-${VERSION}`;
+const SHELL_CACHE = `gealach-shell-${VERSION}`;
+const API_CACHE = `gealach-api-${VERSION}`;
 
 const SHELL_URLS = [
   "./",
@@ -52,7 +52,12 @@ self.addEventListener("activate", (event) => {
       .then((keys) =>
         Promise.all(
           keys
-            .filter((k) => k.startsWith("taoidi-") && k !== SHELL_CACHE && k !== API_CACHE)
+            .filter(
+              (k) =>
+                (k.startsWith("taoidi-") || k.startsWith("gealach-")) &&
+                k !== SHELL_CACHE &&
+                k !== API_CACHE,
+            )
             .map((k) => caches.delete(k)),
         ),
       )
@@ -109,7 +114,7 @@ async function apiRespond(request) {
         headers: { "Content-Type": "application/json" },
       });
     }
-    // Return the last thing we saw; the x-taoidi-fetched header lets the UI
+    // Return the last thing we saw; the x-gealach-fetched header lets the UI
     // label it as old rather than pretending it is fresh.
     return cached;
   }
@@ -117,7 +122,7 @@ async function apiRespond(request) {
 
 function stamp(response) {
   const headers = new Headers(response.headers);
-  headers.set("x-taoidi-fetched", new Date().toUTCString());
+  headers.set("x-gealach-fetched", new Date().toUTCString());
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,

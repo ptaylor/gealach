@@ -125,7 +125,7 @@ alternatives rather than silently choosing one.
 `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter` — no key, CORS
 open. Product `predictions` with `interval=hilo` is the analogue of the Irish
 turns. NOAA asks for an `application=` parameter and throttles heavy use; the
-adapter identifies itself as `taoidi`.
+adapter identifies itself as `gealach`.
 
 Verified (2026-10-04), San Francisco (9414290):
 

@@ -7,10 +7,9 @@ the tide's height and state now, when it turns, what the range is, whether we
 are on springs or neaps, and — where a model is available — which way the water
 is running. It is built for a phone in a pocket, and it starts with Ireland.
 
-The working name is **taoidí** (Irish for *tides*) — provisional, and cheap to
-change now, expensive later. As in the sibling repos, the name carries its
-síneadh fada in prose only: file names, commands and identifiers stay ASCII
-(`taoidi`, `tides`).
+The name is **Gealach** (Irish for *moon*). As in the sibling repos, prose
+carries the capitalised form and identifiers stay ASCII (`gealach`, `tides`);
+the provisional working name was `taoidí` (*tides*) until 2026-10-05.
 
 ## Status
 
