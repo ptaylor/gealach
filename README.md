@@ -34,6 +34,18 @@ It is a PWA. Serve it over HTTPS (GitHub Pages works; `file://` and
 - **Android / desktop**: the browser offers an install prompt.
 - **iOS**: there is no install prompt. Use Share → *Add to Home Screen*.
 
+## Publish
+
+The app is already a static site at the repo root, so publishing is a version
+tag plus a push. Point GitHub Pages at the `main` branch root once
+(Settings → Pages → Deploy from a branch → `main`, `/(root)`), then:
+
+```sh
+./publish.sh        # tags vX.(Y+1), pushes main and the tag
+```
+
+The site is then served at <https://ptaylor.github.io/gealach/>.
+
 ## Data sources and attribution
 
 - **Marine Institute ERDDAP** — Irish tide predictions, high/low turns, surge

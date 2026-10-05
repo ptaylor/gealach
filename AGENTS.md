@@ -343,6 +343,7 @@ Two platform traps to remember, both of which cost an afternoon if forgotten:
 | `data/station-map.json` | The name mapping between the three spellings: `{ prediction, gauge, surge }` per station. Hand-checked, not guessed. |
 | `tools/refresh-stations.sh` | Regenerates `data/stations.json` from ERDDAP (`curl` + `jq`). |
 | `tools/make-icons.sh` | Rasterises `icons/icon.svg` with ImageMagick. |
+| `publish.sh` | Tags a release and pushes; GitHub Pages serves `main` directly (no build). |
 | `test/` | `node --test` units for `js/tide.js` and `js/sources.js`, with recorded fixtures. |
 | `docs/data-sources.md` | The source contract: endpoints, variables, datums, licences, sample responses. |
 | `docs/derivations.md` | The formulas, including springs/neaps and why not the form factor. |
@@ -351,15 +352,13 @@ Two platform traps to remember, both of which cost an afternoon if forgotten:
 
 ## Commands
 
-Nothing in the layout exists yet; these are the commands that file layout fixes,
-and they are recorded here so the first commit can use them without invention.
-
 | Task | Command |
 | --- | --- |
 | Run locally | `python3 -m http.server 8000` then open `http://localhost:8000` |
 | Unit tests | `npm test` (which is `node --test`, no dependencies) |
 | Refresh station list | `./tools/refresh-stations.sh` |
 | Regenerate icons | `./tools/make-icons.sh` |
+| Publish to GitHub Pages | `./publish.sh` (tags `vX.(Y+1)`, pushes main + tag; Pages must be set to the `main` branch root once) |
 | Check a source by hand | see the recorded queries under *Data sources* above |
 
 `package.json` exists only to set `"type": "module"` and the test script. It
