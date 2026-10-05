@@ -11,10 +11,12 @@ cd "$(dirname "$0")/.."
 mkdir -p icons
 
 # -background none must come BEFORE the input file, or transparency is lost
-# and a white square appears behind the rounded icon.
+# and a white square appears behind the rounded icon. The maskable/apple-touch
+# variant carries its own full-bleed ground and must stay opaque (iOS renders
+# transparent apple-touch icons as black).
 magick -background none icons/icon.svg          -resize 512x512 icons/icon-512.png
 magick -background none icons/icon.svg          -resize 192x192 icons/icon-192.png
-magick -background none icons/icon.svg          -resize 180x180 icons/icon-180.png
+magick -background none icons/icon-maskable.svg -resize 180x180 icons/icon-180.png
 magick -background none icons/icon-maskable.svg -resize 512x512 icons/icon-512-maskable.png
 
 # Verify transparency survived on the rounded icon: the corner must be

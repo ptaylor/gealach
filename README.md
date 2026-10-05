@@ -1,3 +1,5 @@
+<img src="icons/icon-180.png" alt="taoidí icon" width="96" align="right" />
+
 # taoidí — tides
 
 What the sea is doing at a coastal place, on a phone in a pocket: the tide's
