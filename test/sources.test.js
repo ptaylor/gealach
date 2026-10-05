@@ -9,6 +9,8 @@ import {
   marineIeSurge,
   openMeteoMarine,
   noaaPredictions,
+  timezoneAt,
+  reverseGeocode,
 } from "../js/sources.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -149,4 +151,26 @@ test("noaaPredictions normalises the hilo response", async () => {
   assert.equal(out.extremes[0].time, "2026-10-04T00:11:00Z");
   assert.equal(out.extremes[0].type, "HIGH");
   assert.equal(out.extremes[0].height, 1.765);
+});
+
+test("timezoneAt returns the IANA zone for a point", async () => {
+  route([["api.open-meteo.com/v1/forecast", await fixture("openmeteo-timezone-galway.json")]]);
+  const out = await timezoneAt({ latitude: 53.27, longitude: -9.05 });
+  assert.equal(out.timezone, "Europe/Dublin");
+  assert.equal(out.timezoneAbbreviation, "GMT+1");
+});
+
+test("reverseGeocode names a point through Photon", async () => {
+  route([["photon.komoot.io", await fixture("photon-reverse-galway.json")]]);
+  const out = await reverseGeocode({ latitude: 53.27, longitude: -9.05 });
+  assert.equal(out.name, "Commercial Dock");
+  assert.equal(out.country, "Ireland");
+  assert.equal(out.countryCode, "IE");
+});
+
+test("reverseGeocode returns nulls when no feature matches", async () => {
+  route([["photon.komoot.io", { type: "FeatureCollection", features: [] }]]);
+  const out = await reverseGeocode({ latitude: 0, longitude: 0 });
+  assert.equal(out.name, null);
+  assert.equal(out.country, null);
 });

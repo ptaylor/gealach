@@ -172,6 +172,26 @@ only, 7-character IDs (`9414290`, `cb1401`). NOAA asks for an `application=`
 parameter and throttles heavy use, so an adapter must identify itself and space
 its calls.
 
+### Map browsing: OpenStreetMap + Photon (2026-10-05)
+
+Verified live on 2026-10-05:
+
+- **Tiles**: `https://tile.openstreetmap.org/{z}/{x}/{y}.png` — standard OSM
+  raster tiles, no key, rendered by Leaflet (vendored under `vendor/leaflet/`).
+  Data is © OpenStreetMap contributors, ODbL; attribution is in the map and the
+  footer. Tiles are ordinary network images, so the map itself does not work
+  offline — the rest of the shell does.
+- **Reverse geocoding**: Photon (`https://photon.komoot.io/reverse?lat=…&lon=…`)
+  — an OpenStreetMap-based geocoder, no key, `access-control-allow-origin: *`
+  (Nominatim itself does **not** send CORS headers, so the browser cannot call
+  it; Photon can). Returns `features[0].properties` (`name`, `country`,
+  `countrycode`, `state`). Used only to name a point picked on the map.
+- **Timezone for a picked point**: the map pick has no name, so no geocoder
+  timezone. Open-Meteo's forecast endpoint with `timezone=auto`
+  (`https://api.open-meteo.com/v1/forecast?latitude=…&longitude=…&current_weather=true&timezone=auto`)
+  returns the IANA zone (`Europe/Dublin` for Galway), which keeps requirement 11
+  honest for map picks.
+
 ### Candidates, not adopted
 
 Listed with what was and was not checked, so nobody re-derives it:
@@ -314,7 +334,8 @@ Two platform traps to remember, both of which cost an afternoon if forgotten:
 | `index.html` | The app shell — markup, inline CSS, module entry. |
 | `js/sources.js` | Source adapters; the only place that knows a provider's URL shape. DOM-free, unit-tested. |
 | `js/tide.js` | Pure derivations: nearest station, rate, next turn, range, springs/neaps. DOM-free, unit-tested. |
-| `js/app.js` | DOM, rendering, install prompt, offline banner. |
+| `js/app.js` | DOM, rendering, map browsing, install prompt, offline banner. |
+| `vendor/leaflet/` | Vendored Leaflet 1.9.4 (`leaflet.js`, `leaflet.css`) for the map; BSD-2-Clause. |
 | `sw.js` | Service worker: app shell cache, and a short-TTL cache for API responses. |
 | `manifest.webmanifest` | Name, icons, colours, `display: standalone`. |
 | `icons/` | `icon.svg` source plus generated PNG sizes; generated, not drawn by hand. |
@@ -375,6 +396,22 @@ Update this section in the same commit that adds or upgrades a dependency.
   - Abort in-flight requests when the location changes; a slow answer for the
     previous station must not paint over the current one.
 - **Docs**: <https://developer.mozilla.org/en-US/docs/Web/JavaScript>
+
+### Leaflet (vendored, no bundler)
+
+- **Role**: the OpenStreetMap browser for picking a coastal point.
+- **Version**: 1.9.4, vendored under `vendor/leaflet/` (BSD-2-Clause). A
+  deliberate dependency — the house rule prefers zero dependencies, but an
+  interactive pan/zoom map is not worth hand-rolling; vendoring keeps it
+  self-contained with no build step and no CDN at run time.
+- **Best Practices**:
+  - Tiles are OSM raster tiles; they are ordinary network images, so the map
+    does not work offline even though the shell does.
+  - Use `L.circleMarker` for the picked point, so no marker image assets are
+    needed beyond `leaflet.js` and `leaflet.css`.
+  - Create the map lazily and call `invalidateSize()` after un-hiding its
+    container; Leaflet measures the container on creation.
+- **Docs**: <https://leafletjs.com/reference.html>
 
 ### Web App Manifest and Service Worker (PWA)
 

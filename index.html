@@ -10,6 +10,7 @@
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
   <link rel="icon" href="icons/icon-192.png" type="image/png" sizes="192x192" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
   <title>taoidí — tides</title>
   <style>
     :root {
@@ -64,6 +65,11 @@
       border: 0; border-radius: 10px; background: var(--accent); color: #fff;
     }
     button:active { opacity: 0.85; }
+    button.secondary { background: var(--card); color: var(--accent); border: 1px solid var(--border); }
+
+    #map-card { padding: 0; overflow: hidden; }
+    #map { height: 260px; }
+    #map-card p { padding: 0.6rem 1rem; margin: 0; }
 
     .choices { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.75rem; }
     .choices button {
@@ -123,7 +129,13 @@
       <input id="q" type="search" inputmode="search" autocomplete="off"
              placeholder="Place name, or 53.27, -9.05" aria-label="Place name or coordinates" />
       <button type="submit">Tide</button>
+      <button type="button" id="map-toggle" class="secondary" aria-expanded="false">Map</button>
     </form>
+
+    <div id="map-card" class="card hidden">
+      <div id="map" aria-label="Map"></div>
+      <p class="muted">Tap the coast to get the tide there. Map data © OpenStreetMap contributors.</p>
+    </div>
 
     <div id="choices" class="choices hidden" aria-label="Matching places"></div>
     <div id="offline" class="warning hidden">Offline — showing the last fetched prediction.</div>
@@ -177,6 +189,7 @@
     </footer>
   </main>
 
+  <script src="vendor/leaflet/leaflet.js"></script>
   <script type="module" src="js/app.js"></script>
 </body>
 </html>

@@ -7,7 +7,7 @@
 //
 // A service worker only runs over HTTPS or localhost — see AGENTS.md.
 
-const VERSION = "v1";
+const VERSION = "v2";
 const SHELL_CACHE = `taoidi-shell-${VERSION}`;
 const API_CACHE = `taoidi-api-${VERSION}`;
 
@@ -17,6 +17,8 @@ const SHELL_URLS = [
   "./js/app.js",
   "./js/sources.js",
   "./js/tide.js",
+  "./vendor/leaflet/leaflet.js",
+  "./vendor/leaflet/leaflet.css",
   "./manifest.webmanifest",
   "./icons/icon.svg",
   "./icons/icon-192.png",

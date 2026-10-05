@@ -137,6 +137,22 @@ begin_date=20261004&end_date=20261005&datum=MLLW&time_zone=gmt&units=metric&inte
 Heights are in the requested datum (MLLW here). The adapter returns extremes
 only; the hourly curve product is a later extension.
 
+## Map browsing — OpenStreetMap, Photon, timezone
+
+- **Tiles**: `https://tile.openstreetmap.org/{z}/{x}/{y}.png`, rendered by
+  vendored Leaflet 1.9.4. Data is © OpenStreetMap contributors (ODbL), with
+  attribution in the map and the footer. Tiles are network images, so the map
+  itself does not work offline.
+- **Reverse geocoding**: Photon (`https://photon.komoot.io/reverse?lat=…&lon=…`),
+  an OpenStreetMap-based geocoder with `access-control-allow-origin: *`
+  (Nominatim itself does not send CORS headers). Returns
+  `features[0].properties.name`, `country`, `countrycode`, `state`. Used to
+  name a point picked on the map. Verified (2026-10-05): 53.27, -9.05 →
+  `"Commercial Dock", "Ireland"`.
+- **Timezone for a picked point**: Open-Meteo's forecast endpoint with
+  `timezone=auto` returns the IANA zone. Verified (2026-10-05): 53.27, -9.05 →
+  `"Europe/Dublin"` (`GMT+1`, `utc_offset_seconds: 3600`).
+
 ## Candidates, not adopted
 
 See `AGENTS.md` — Copernicus Marine, WorldTides, Stormglass, UKHO Admiralty,

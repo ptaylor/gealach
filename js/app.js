@@ -17,6 +17,8 @@ import {
   marineIeTides,
   marineIeSurge,
   openMeteoMarine,
+  timezoneAt,
+  reverseGeocode,
 } from "./sources.js";
 
 // Beyond this distance the Irish prediction stations stop being "local" at all
@@ -28,7 +30,7 @@ const iso = (d) => d.toISOString();
 const isoHoursAgo = (h) => new Date(Date.now() - h * 3600000).toISOString();
 
 const ATTRIBUTION =
-  "Data: Marine Institute (CC-BY 4.0) · Open-Meteo & GeoNames (CC-BY 4.0) · NOAA.";
+  "Data: Marine Institute (CC-BY 4.0) · Open-Meteo & GeoNames (CC-BY 4.0) · NOAA · OpenStreetMap (ODbL).";
 
 let stations = [];
 let stationMap = null;
@@ -42,12 +44,15 @@ let zone = "UTC";
 let zoneOffset = "+00:00";
 let zoneAbbr = "UTC";
 let datumChoice = "LAT";
+let map = null;
+let mapMarker = null;
 
 init();
 
 async function init() {
   $("search").addEventListener("submit", onSubmit);
   $("datum-toggle").addEventListener("click", toggleDatum);
+  $("map-toggle").addEventListener("click", toggleMap);
   $("attribution").textContent = ATTRIBUTION;
 
   // Vendored snapshots. A failed fetch degrades gracefully: no station list
@@ -81,6 +86,73 @@ async function init() {
   window.addEventListener("offline", () => setOffline(true));
   window.addEventListener("online", () => setOffline(false));
   setOffline(!navigator.onLine);
+}
+
+// ---------------------------------------------------------------------------
+// map browsing
+
+function toggleMap() {
+  const card = $("map-card");
+  const show = card.classList.contains("hidden");
+  card.classList.toggle("hidden", !show);
+  $("map-toggle").setAttribute("aria-expanded", String(show));
+  if (show) {
+    initMap();
+    // Leaflet measures its container on creation; re-measure once it is shown.
+    requestAnimationFrame(() => map && map.invalidateSize());
+  }
+}
+
+function initMap() {
+  if (map || !window.L) return;
+  // Start on the Irish coast — the region the app knows first.
+  map = L.map("map").setView([53.4, -8.2], 7);
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  }).addTo(map);
+  map.on("click", onMapClick);
+}
+
+function placeMarker(lat, lon) {
+  if (mapMarker) mapMarker.remove();
+  mapMarker = L.circleMarker([lat, lon], {
+    radius: 7,
+    color: "#0b6bcb",
+    weight: 2,
+    fillColor: "#0b6bcb",
+    fillOpacity: 0.8,
+  }).addTo(map);
+}
+
+async function onMapClick(e) {
+  const lat = e.latlng.lat;
+  const lon = e.latlng.lng;
+  placeMarker(lat, lon);
+  hideChoices();
+  $("result").classList.add("hidden");
+  setStatus("Fetching tides…");
+  abort();
+
+  let label = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+  try {
+    const [tz, place] = await Promise.all([
+      timezoneAt({ latitude: lat, longitude: lon }, { signal: controller.signal }),
+      reverseGeocode({ latitude: lat, longitude: lon }, { signal: controller.signal }).catch(() => null),
+    ]);
+    setZone(tz.timezone);
+    if (place && place.name) {
+      label = place.name;
+      if (place.state) label += `, ${place.state}`;
+      else if (place.country) label += `, ${place.country}`;
+    }
+  } catch {
+    setZone("UTC");
+    label += " (UTC shown)";
+  }
+  placeLabel = label;
+  await load({ latitude: lat, longitude: lon });
 }
 
 // ---------------------------------------------------------------------------

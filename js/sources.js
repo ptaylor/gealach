@@ -31,6 +31,8 @@ import { haversineKm, nearestStation } from "./tide.js";
 const ERDDAP = "https://erddap.marine.ie/erddap";
 const GEOCODE = "https://geocoding-api.open-meteo.com/v1/search";
 const OPEN_METEO_MARINE = "https://marine-api.open-meteo.com/v1/marine";
+const OPEN_METEO_FORECAST = "https://api.open-meteo.com/v1/forecast";
+const PHOTON = "https://photon.komoot.io";
 const NOAA = "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter";
 
 const HOUR_MS = 3600000;
@@ -170,6 +172,46 @@ export async function geocode(query, { language = "en", count = 5, signal } = {}
       population: r.population ?? null,
     })),
     fetchedAt,
+  };
+}
+
+/**
+ * IANA timezone for a point, from Open-Meteo's forecast endpoint
+ * (timezone=auto). Used when the point came from the map rather than from a
+ * geocoded name, so map picks still show local time.
+ */
+export async function timezoneAt(point, { signal } = {}) {
+  const params = new URLSearchParams({
+    latitude: String(point.latitude),
+    longitude: String(point.longitude),
+    current_weather: "true",
+    timezone: "auto",
+  });
+  const { data } = await fetchJson(`${OPEN_METEO_FORECAST}?${params.toString()}`, signal);
+  return {
+    timezone: data.timezone || "UTC",
+    timezoneAbbreviation: data.timezone_abbreviation || null,
+  };
+}
+
+/**
+ * Reverse geocode a point through Photon (OpenStreetMap-based, CORS open).
+ * Returns a place name for display; nulls when the point is not named.
+ */
+export async function reverseGeocode(point, { signal } = {}) {
+  const params = new URLSearchParams({
+    lat: String(point.latitude),
+    lon: String(point.longitude),
+    lang: "en",
+  });
+  const { data } = await fetchJson(`${PHOTON}/reverse?${params.toString()}`, signal);
+  const feature = (data.features || [])[0];
+  const p = feature?.properties || {};
+  return {
+    name: p.name ?? null,
+    country: p.country ?? null,
+    countryCode: p.countrycode ?? null,
+    state: p.state ?? null,
   };
 }
 
