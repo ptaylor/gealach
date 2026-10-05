@@ -47,6 +47,9 @@ let zoneAbbr = "UTC";
 let datumChoice = "LAT";
 let map = null;
 let mapMarker = null;
+let favourites = [];
+let currentPoint = null;
+const FAVOURITES_KEY = "gealach-favourites";
 
 init();
 
@@ -54,6 +57,7 @@ async function init() {
   $("search").addEventListener("submit", onSubmit);
   $("datum-toggle").addEventListener("click", toggleDatum);
   $("map-toggle").addEventListener("click", toggleMap);
+  $("heart").addEventListener("click", toggleFavourite);
   $("attribution").textContent = ATTRIBUTION;
 
   // Vendored snapshots. A failed fetch degrades gracefully: no station list
@@ -89,6 +93,8 @@ async function init() {
   setOffline(!navigator.onLine);
 
   renderMoon();
+  loadFavourites();
+  renderFavourites();
 }
 
 // ---------------------------------------------------------------------------
@@ -210,6 +216,7 @@ async function choose(r) {
 }
 
 async function load(point) {
+  currentPoint = point;
   setStatus("Fetching tides…");
   try {
     const near = stations.length ? nearestStation(point, stations) : null;
@@ -268,7 +275,7 @@ function render() {
   const kindWord =
     r.kind === "global-model" ? "global model" :
     r.kind === "model" ? "model" : "prediction station";
-  $("where").innerHTML =
+  $("where-text").innerHTML =
     `<strong>${escapeHtml(placeLabel)}</strong><br>` +
     `<span class="muted">${kindWord} <strong>${escapeHtml(r.stationName)}</strong>` +
     `${r.distanceKm != null ? ` — ${km(r.distanceKm)} from where you asked` : ""}</span>`;
@@ -338,6 +345,8 @@ function render() {
   $("provenance").innerHTML =
     `Source ${r.source} · station ${escapeHtml(r.station)} · datum ${escapeHtml(r.datum)} · ` +
     `fetched ${fmtDayTime(r.fetchedAt, zone)} (${zoneAbbr}, ${zoneOffset})`;
+
+  renderHeart();
 }
 
 function activeSeries(r) {
@@ -659,6 +668,157 @@ function arcCubics(cx, cy, r, aStart, delta) {
     segs.push([p1, c1, c2, p2]);
   }
   return segs;
+}
+
+// ---------------------------------------------------------------------------
+// favourites
+
+function loadFavourites() {
+  try {
+    const raw = localStorage.getItem(FAVOURITES_KEY);
+    favourites = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(favourites)) favourites = [];
+  } catch {
+    favourites = [];
+  }
+}
+
+function persistFavourites() {
+  try {
+    localStorage.setItem(FAVOURITES_KEY, JSON.stringify(favourites));
+  } catch {
+    /* storage unavailable — favourites are just not persisted */
+  }
+}
+
+function heartKey(point) {
+  return `${point.latitude.toFixed(4)},${point.longitude.toFixed(4)}`;
+}
+
+function isFavourited(point) {
+  return !!point && favourites.some((f) => f.id === heartKey(point));
+}
+
+function renderHeart() {
+  const btn = $("heart");
+  if (!currentPoint) {
+    btn.classList.add("hidden");
+    return;
+  }
+  btn.classList.remove("hidden");
+  const saved = isFavourited(currentPoint);
+  btn.textContent = saved ? "♥" : "♡";
+  btn.classList.toggle("saved", saved);
+  btn.setAttribute("aria-label", saved ? "Remove from favourites" : "Save to favourites");
+}
+
+function toggleFavourite() {
+  if (!currentPoint) return;
+  const id = heartKey(currentPoint);
+  const existing = favourites.find((f) => f.id === id);
+  if (existing) {
+    favourites = favourites.filter((f) => f.id !== id);
+  } else {
+    favourites.push({
+      id,
+      name: placeLabel,
+      latitude: currentPoint.latitude,
+      longitude: currentPoint.longitude,
+      timezone: zone,
+    });
+  }
+  persistFavourites();
+  renderFavourites();
+  renderHeart();
+}
+
+function renderFavourites() {
+  const card = $("favourites-card");
+  const list = $("favourites-list");
+  if (!favourites.length) {
+    card.classList.add("hidden");
+    list.innerHTML = "";
+    return;
+  }
+  card.classList.remove("hidden");
+  list.innerHTML = "";
+
+  for (const f of favourites) {
+    const li = document.createElement("li");
+    li.dataset.id = f.id;
+
+    const go = document.createElement("button");
+    go.type = "button";
+    go.className = "fave-go";
+    const nameSpan = document.createElement("span");
+    nameSpan.className = "fave-name";
+    nameSpan.textContent = f.name;
+    const subSpan = document.createElement("span");
+    subSpan.className = "fave-sub";
+    subSpan.textContent = `${f.latitude.toFixed(3)}, ${f.longitude.toFixed(3)}`;
+    go.append(nameSpan, subSpan);
+    go.addEventListener("click", () => goFavourite(f));
+
+    const rename = document.createElement("button");
+    rename.type = "button";
+    rename.className = "fave-rename";
+    rename.textContent = "✎";
+    rename.title = "Rename";
+    rename.setAttribute("aria-label", `Rename ${f.name}`);
+    rename.addEventListener("click", () => beginRename(li, f));
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "fave-remove saved";
+    remove.textContent = "♥";
+    remove.title = "Remove";
+    remove.setAttribute("aria-label", `Remove ${f.name}`);
+    remove.addEventListener("click", () => {
+      favourites = favourites.filter((x) => x.id !== f.id);
+      persistFavourites();
+      renderFavourites();
+      renderHeart();
+    });
+
+    li.append(go, rename, remove);
+    list.appendChild(li);
+  }
+}
+
+function beginRename(li, f) {
+  const go = li.querySelector(".fave-go");
+  const input = document.createElement("input");
+  input.type = "text";
+  input.value = f.name;
+  input.className = "fave-input";
+  input.setAttribute("aria-label", "Rename favourite");
+  const commit = () => {
+    const name = input.value.trim();
+    if (name) f.name = name;
+    persistFavourites();
+    renderFavourites();
+  };
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") input.blur();
+    else if (e.key === "Escape") {
+      input.value = f.name;
+      input.blur();
+    }
+  });
+  input.addEventListener("blur", commit);
+  go.replaceWith(input);
+  input.focus();
+  input.select();
+}
+
+function goFavourite(f) {
+  abort();
+  hideChoices();
+  $("result").classList.add("hidden");
+  setZone(f.timezone || "UTC");
+  placeLabel = f.name;
+  setStatus("Fetching tides…");
+  load({ latitude: f.latitude, longitude: f.longitude });
 }
 
 // ---------------------------------------------------------------------------

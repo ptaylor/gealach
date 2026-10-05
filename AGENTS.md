@@ -58,7 +58,8 @@ not called. Where a candidate source was *not* verified, it says so (see
   from the browser (all three primary sources send
   `access-control-allow-origin: *` — verified). Nothing about the user is
   stored or sent anywhere except the place name they typed, which goes to the
-  geocoder.
+  geocoder. Favourites are an exception in name only: they live in
+  `localStorage` on the device and never leave it.
 - **No native app.** A PWA, installed from the browser.
 
 ## Data sources — verified 2026-09-30

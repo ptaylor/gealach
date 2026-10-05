@@ -27,6 +27,7 @@
       --grid: #e8ecf1;
       --moon: #d7dde5;
       --moon-lit: #f0c75e;
+      --heart: #e11d48;
     }
     @media (prefers-color-scheme: dark) {
       :root {
@@ -76,6 +77,21 @@
 
     .moon-row { display: flex; align-items: center; gap: 0.9rem; }
     .moon-name { font-size: 1.15rem; font-weight: 600; }
+
+    .where-row { display: flex; align-items: flex-start; gap: 0.6rem; }
+    .where-row #where-text { flex: 1; }
+    .heart { flex: none; background: none; border: none; font-size: 1.6rem; line-height: 1; color: var(--muted); padding: 0.1rem; cursor: pointer; }
+    .heart.saved { color: var(--heart); }
+
+    .faves { list-style: none; margin: 0; padding: 0; }
+    .faves li { display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0; border-bottom: 1px solid var(--grid); }
+    .faves li:last-child { border-bottom: 0; }
+    .fave-go { flex: 1; text-align: left; background: none; border: none; color: var(--fg); padding: 0; display: flex; flex-direction: column; }
+    .fave-name { font-weight: 600; }
+    .fave-sub { font-size: 0.8rem; color: var(--muted); }
+    .fave-rename, .fave-remove { background: none; border: none; color: var(--muted); font-size: 1.1rem; padding: 0.2rem 0.3rem; cursor: pointer; }
+    .fave-remove.saved { color: var(--heart); }
+    .fave-input { flex: 1; font-size: 1rem; padding: 0.3rem 0.5rem; border: 1px solid var(--accent); border-radius: 6px; background: var(--card); color: var(--fg); }
 
     .choices { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.75rem; }
     .choices button {
@@ -154,12 +170,22 @@
       </div>
     </div>
 
+    <div id="favourites-card" class="card hidden">
+      <h2>Favourites</h2>
+      <ul id="favourites-list" class="faves"></ul>
+    </div>
+
     <div id="choices" class="choices hidden" aria-label="Matching places"></div>
     <div id="offline" class="warning hidden">Offline — showing the last fetched prediction.</div>
     <p id="status" class="status hidden" role="status"></p>
 
     <section id="result" class="hidden">
-      <div id="where" class="card" style="font-size:1.05rem"></div>
+      <div id="where" class="card">
+        <div class="where-row">
+          <div id="where-text" style="font-size:1.05rem"></div>
+          <button id="heart" class="heart" type="button" aria-label="Save to favourites" hidden>♡</button>
+        </div>
+      </div>
       <div id="warning" class="warning hidden"></div>
 
       <div class="card now">
