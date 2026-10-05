@@ -25,6 +25,8 @@
       --ok: #166534;
       --bad: #b91c1c;
       --grid: #e8ecf1;
+      --moon: #d7dde5;
+      --moon-lit: #f0c75e;
     }
     @media (prefers-color-scheme: dark) {
       :root {
@@ -39,6 +41,7 @@
         --ok: #4ade80;
         --bad: #f87171;
         --grid: #222834;
+        --moon: #3d4553;
       }
     }
     * { box-sizing: border-box; }
@@ -70,6 +73,9 @@
     #map-card { padding: 0; overflow: hidden; }
     #map { height: 260px; }
     #map-card p { padding: 0.6rem 1rem; margin: 0; }
+
+    .moon-row { display: flex; align-items: center; gap: 0.9rem; }
+    .moon-name { font-size: 1.15rem; font-weight: 600; }
 
     .choices { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.75rem; }
     .choices button {
@@ -135,6 +141,17 @@
     <div id="map-card" class="card hidden">
       <div id="map" aria-label="Map"></div>
       <p class="muted">Tap the coast to get the tide there. Map data © OpenStreetMap contributors.</p>
+    </div>
+
+    <div class="card">
+      <h2>Moon</h2>
+      <div class="moon-row">
+        <svg id="moon-glyph" viewBox="0 0 64 64" width="52" height="52" aria-hidden="true"></svg>
+        <div>
+          <div id="moon-name" class="moon-name"></div>
+          <div id="moon-detail" class="muted"></div>
+        </div>
+      </div>
     </div>
 
     <div id="choices" class="choices hidden" aria-label="Matching places"></div>

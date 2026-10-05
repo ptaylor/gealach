@@ -8,6 +8,7 @@ import {
   rangeAnalysis,
   nearestCurrent,
   compassPoint,
+  lunarPhase,
   MAX_STATION_DISTANCE_KM,
 } from "../js/tide.js";
 
@@ -109,6 +110,21 @@ test("rangeAnalysis names the next spring after now", () => {
     t > base + 3 * DAY && t < base + 6 * DAY,
     `nextSpring ${nextSpring} out of the expected window`,
   );
+});
+
+test("lunarPhase is new moon at the reference epoch", () => {
+  const p = lunarPhase("2000-01-06T18:14:00Z");
+  assert.equal(p.name, "New moon");
+  assert.ok(Math.abs(p.fraction) < 1e-9);
+  assert.ok(Math.abs(p.illuminated) < 1e-9);
+});
+
+test("lunarPhase names the quarters across a synodic month", () => {
+  assert.equal(lunarPhase("2000-01-14T03:25:00Z").name, "First quarter");
+  const full = lunarPhase("2000-01-21T12:36:00Z");
+  assert.equal(full.name, "Full moon");
+  assert.ok(Math.abs(full.fraction - 0.5) < 0.01);
+  assert.equal(lunarPhase("2000-01-28T21:47:00Z").name, "Last quarter");
 });
 
 // One high and one low per day, range following a ~14.8-day spring/neap cycle

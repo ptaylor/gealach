@@ -87,6 +87,28 @@ now, speed converted from km/h to m/s, direction kept as compass degrees and
 labelled "heading towards". It is model output, and is labelled as such with
 the model's resolution.
 
+## Lunar phase
+
+The Moon's phase at a moment is a fraction of the synodic month since a
+reference new moon:
+
+$$
+p = \left(\frac{t - T_0}{29.530\,588\,853\ \text{d}}\right) \bmod 1
+$$
+
+where $T_0$ is a known new-moon instant (2000-01-06 18:14 UTC). $p$ runs 0
+(new) → 0.5 (full) → 1 (new again). The illuminated fraction of the disc is
+
+$$
+f = \tfrac{1}{2}\left(1 - \cos 2\pi p\right)
+$$
+
+and the eight phase names are the buckets $\lfloor 8p + 0.5\rfloor \bmod 8$.
+This is a phase approximation for the display, not a navigation ephemeris. The
+glyph draws the lit portion as the disc minus a shadow circle of equal radius
+whose centre sweeps across the disc, lit on the right while waxing and on the
+left while waning (Northern-hemisphere convention).
+
 ## Rounding — made once, at presentation
 
 | Quantity | Rounding |

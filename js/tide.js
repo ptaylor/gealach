@@ -216,3 +216,44 @@ export function compassPoint(degrees) {
   const idx = Math.round((((degrees % 360) + 360) % 360) / 22.5) % 16;
   return COMPASS[idx];
 }
+
+// ---------------------------------------------------------------------------
+// Lunar phase
+
+const SYNODIC_MONTH_MS = 29.530588853 * 86400000;
+// A well-known new-moon instant, used as the reference epoch.
+const NEW_MOON_EPOCH_MS = Date.parse("2000-01-06T18:14:00Z");
+
+const PHASE_NAMES = [
+  "New moon",
+  "Waxing crescent",
+  "First quarter",
+  "Waxing gibbous",
+  "Full moon",
+  "Waning gibbous",
+  "Last quarter",
+  "Waning crescent",
+];
+
+/**
+ * The phase of the Moon at a moment, from the synodic month since a reference
+ * new moon. `fraction` runs 0 (new) → 0.5 (full) → 1 (new again);
+ * `illuminated` is the fraction of the disc lit (0..1); `ageDays` is the age
+ * of the Moon in days since the last new moon. This is a phase approximation,
+ * not a navigation ephemeris.
+ */
+export function lunarPhase(now = new Date()) {
+  const t = new Date(now).getTime();
+  const ageMs =
+    (((t - NEW_MOON_EPOCH_MS) % SYNODIC_MONTH_MS) + SYNODIC_MONTH_MS) %
+    SYNODIC_MONTH_MS;
+  const fraction = ageMs / SYNODIC_MONTH_MS;
+  const illuminated = 0.5 * (1 - Math.cos(2 * Math.PI * fraction));
+  return {
+    fraction,
+    illuminated,
+    ageDays: ageMs / 86400000,
+    name: PHASE_NAMES[Math.round(fraction * 8) % 8],
+  };
+}
+
