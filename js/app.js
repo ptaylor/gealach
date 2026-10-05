@@ -733,15 +733,15 @@ function toggleFavourite() {
 }
 
 function renderFavourites() {
-  const card = $("favourites-card");
   const list = $("favourites-list");
+  list.innerHTML = "";
   if (!favourites.length) {
-    card.classList.add("hidden");
-    list.innerHTML = "";
+    const li = document.createElement("li");
+    li.className = "fave-empty";
+    li.textContent = "No favourites yet — tap the ♡ on a result to save it.";
+    list.appendChild(li);
     return;
   }
-  card.classList.remove("hidden");
-  list.innerHTML = "";
 
   for (const f of favourites) {
     const li = document.createElement("li");
