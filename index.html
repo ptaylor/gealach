@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b6bcb" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)" />
+  <meta name="description" content="What the sea is doing at a coastal place: tide height and state now, the next high and low, the range, and the modelled current." />
+  <meta name="version" content="v0.3" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="icon" href="icons/icon-192.png" type="image/png" sizes="192x192" />
+  <link rel="apple-touch-icon" href="icons/icon-180.png" />
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
+  <title>Gealach — tides</title>
+  <style>
+    :root {
+      --bg: #f5f6f8;
+      --fg: #1b1e24;
+      --muted: #5c6470;
+      --accent: #0b6bcb;
+      --card: #ffffff;
+      --border: #dde1e7;
+      --warn: #b45309;
+      --warn-bg: #fef3c7;
+      --ok: #166534;
+      --bad: #b91c1c;
+      --grid: #e8ecf1;
+      --moon: #d7dde5;
+      --moon-lit: #f0c75e;
+      --brand-silver: #b9c0cc;
+      --brand-blue: #0b6bcb;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f1115;
+        --fg: #e7e9ee;
+        --muted: #9aa2ae;
+        --accent: #5aa7ff;
+        --card: #181b21;
+        --border: #2a303b;
+        --warn: #fbbf24;
+        --warn-bg: #3a2f10;
+        --ok: #4ade80;
+        --bad: #f87171;
+        --grid: #222834;
+        --moon: #3d4553;
+        --brand-silver: #c6ccd6;
+        --brand-blue: #5a9fe0;
+      }
+    }
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font: 17px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: env(safe-area-inset-top) 16px calc(24px + env(safe-area-inset-bottom));
+    }
+    main { max-width: 34rem; margin: 0 auto; }
+    header h1 { font-size: 2rem; margin: 0; line-height: 1; }
+    .brand { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.5rem; }
+    .brand-icon { width: 42px; height: 42px; flex: none; transform: translateY(2px); }
+    .t-geal { color: var(--brand-silver); }
+    .t-ach { color: var(--brand-blue); }
+    .tagline { color: var(--muted); margin: 0.2rem 0 1rem; }
+
+    form { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
+    input[type="search"] {
+      flex: 1; font-size: 1.05rem; padding: 0.7rem 0.85rem;
+      border: 1px solid var(--border); border-radius: 10px;
+      background: var(--card); color: var(--fg);
+    }
+    button {
+      font-size: 1.05rem; font-weight: 600; padding: 0.7rem 1.1rem;
+      border: 0; border-radius: 10px; background: var(--accent); color: #fff;
+    }
+    button:active { opacity: 0.85; }
+    button.secondary { background: var(--card); color: var(--accent); border: 1px solid var(--border); }
+
+    #map-card { padding: 0; overflow: hidden; position: relative; }
+    #map { height: 260px; }
+    #map-card p { padding: 0.6rem 1rem; margin: 0; }
+    .locate { position: absolute; top: 10px; right: 10px; z-index: 1000; background: var(--card); border: 1px solid var(--border); border-radius: 8px; font-size: 1.1rem; line-height: 1; padding: 0.45rem 0.6rem; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,.25); }
+    .locate:disabled { opacity: 0.6; cursor: default; }
+
+    .moon-row { display: flex; align-items: center; gap: 0.9rem; }
+    .moon-name { font-size: 1.15rem; font-weight: 600; }
+    .moon-btn { width: 100%; appearance: none; -webkit-appearance: none; background: none; border: 0; padding: 0; text-align: left; color: inherit; font: inherit; cursor: pointer; }
+    .sum-moon-btn { display: flex; appearance: none; -webkit-appearance: none; background: none; border: 0; padding: 0; cursor: pointer; }
+    .sum-right { display: flex; align-items: center; gap: 0.8rem; flex: none; margin-right: 0.4rem; }
+    .sum-current { display: flex; align-items: center; gap: 0.25rem; appearance: none; -webkit-appearance: none; background: none; border: 0; padding: 0; cursor: pointer; color: inherit; font: inherit; }
+    .sum-current-speed { font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+    .where-row { display: flex; align-items: flex-start; gap: 0.6rem; }
+    .where-row #where-text { flex: 1; }
+    .heart { flex: none; background: var(--card); border: 1px solid var(--border); border-radius: 999px; font-size: 1.15rem; line-height: 1; color: var(--moon-lit); padding: 0.45rem 0.75rem; cursor: pointer; white-space: nowrap; }
+    .heart.saved { color: var(--moon-lit); border-color: var(--moon-lit); }
+
+    .faves { list-style: none; margin: 0; padding: 0; }
+    .faves li { display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0; border-bottom: 1px solid var(--grid); }
+    .faves li:last-child { border-bottom: 0; }
+    .faves li.fave-empty { color: var(--muted); border-bottom: 0; }
+    .fave-go { flex: 1; text-align: left; background: none; border: none; color: var(--fg); padding: 0; display: flex; flex-direction: column; }
+    .fave-name { font-weight: 600; }
+    .fave-sub { font-size: 0.8rem; color: var(--muted); }
+    .fave-rename, .fave-remove { background: none; border: none; color: var(--muted); font-size: 1.1rem; padding: 0.2rem 0.3rem; cursor: pointer; }
+    .fave-remove.saved { color: var(--moon-lit); }
+    .fave-input { flex: 1; font-size: 1rem; padding: 0.3rem 0.5rem; border: 1px solid var(--accent); border-radius: 6px; background: var(--card); color: var(--fg); }
+
+    .choices { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.75rem; }
+    .choices button {
+      background: var(--card); color: var(--fg); border: 1px solid var(--border);
+      font-weight: 400; font-size: 0.9rem; padding: 0.4rem 0.7rem;
+    }
+    .choices button.picked { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+
+    .status { color: var(--muted); margin: 0.5rem 0; }
+    .warning {
+      background: var(--warn-bg); color: var(--warn);
+      border-radius: 10px; padding: 0.6rem 0.8rem; margin: 0.5rem 0; font-weight: 600;
+    }
+
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 0.9rem 1rem; margin-bottom: 0.75rem;
+    }
+    .card h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0 0 0.5rem; }
+
+    .now { text-align: center; }
+    .datum-row { display: flex; justify-content: center; gap: 0.5rem; align-items: baseline; flex-wrap: wrap; }
+    .datum-row .dat { color: var(--muted); font-size: 0.85rem; }
+    .big { font-size: 4.2rem; font-weight: 700; line-height: 1.05; font-variant-numeric: tabular-nums; }
+    .big .unit { font-size: 1.4rem; font-weight: 400; color: var(--muted); }
+    .state { font-size: 1.1rem; margin-top: 0.2rem; }
+    .state .rising { color: var(--accent); }
+    .state .falling { color: var(--warn); }
+
+    .turn-row { display: flex; justify-content: space-between; padding: 0.35rem 0; border-bottom: 1px solid var(--grid); }
+    .turn-row:last-child { border-bottom: 0; }
+    .turn-row .kind { color: var(--muted); }
+    .turn-row .time { font-variant-numeric: tabular-nums; }
+    .turn-row .height { font-variant-numeric: tabular-nums; font-weight: 600; }
+
+    svg#curve { width: 100%; height: auto; display: block; }
+    .curve-line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; }
+    .curve-now { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
+    .curve-label { fill: var(--muted); font-size: 10px; }
+    .curve-fill { fill: var(--accent); opacity: 0.08; }
+    svg#curve, svg#sum-curve { cursor: pointer; }
+
+    .sum-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.8rem; margin-bottom: 0.2rem; }
+    .sum-name { font-size: 1.2rem; font-weight: 700; cursor: pointer; }
+    .sum-name:hover { text-decoration: underline; }
+    .sum-locate { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.1rem 0 0; border: 0; background: none; cursor: pointer; color: var(--accent); font-size: 0.85rem; }
+    .sum-locate:hover { text-decoration: underline; }
+    .sum-moon { display: flex; align-items: center; gap: 0.45rem; flex: none; }
+    svg#sum-curve { width: 100%; height: auto; display: block; }
+    .sum-turns { display: flex; justify-content: space-between; gap: 1rem; margin-top: 0.2rem; }
+    .sum-turn { font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+
+    .current-big { font-size: 2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .provenance { font-size: 0.85rem; }
+    footer { margin-top: 1rem; font-size: 0.85rem; }
+    footer .notice { color: var(--muted); border-top: 1px solid var(--border); padding-top: 0.6rem; }
+    .muted { color: var(--muted); }
+    .hidden { display: none; }
+
+    .brand { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; cursor: default; }
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; z-index: 2000; padding: 1.2rem; }
+    .overlay.hidden { display: none; }
+    .overlay-panel { background: var(--card); color: var(--fg); border: 1px solid var(--border); border-radius: 16px; padding: 1.5rem; max-width: 22rem; width: 100%; text-align: center; box-shadow: 0 12px 40px rgba(0,0,0,.4); }
+    .overlay-panel h2 { margin: 0 0 0.3rem; font-size: 1.4rem; }
+    .info-icon { display: block; width: 56px; height: 56px; margin: 0 auto 0.5rem; }
+    .info-version { color: var(--muted); margin-bottom: 0.5rem; }
+    .info-tagline { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.1rem; }
+    .info-link { display: block; color: var(--accent); margin-bottom: 1rem; }
+    .info-close { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 0.5rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer; }
+    .moon-pop-glyph { display: block; margin: 0 auto 0.6rem; }
+    .moon-pop-detail { color: var(--muted); margin-bottom: 0.6rem; }
+    .moon-next { margin-bottom: 1rem; font-size: 0.92rem; }
+    .moon-next div { margin: 0.15rem 0; }
+    .tide-pop-source { margin-bottom: 0.6rem; font-size: 0.92rem; }
+    .tide-pop-spring { margin-bottom: 0.3rem; }
+    .tide-pop-next { margin-bottom: 0.5rem; font-size: 0.92rem; }
+    .tide-pop-next div { margin: 0.1rem 0; }
+    .tide-pop-state { font-size: 1.15rem; font-weight: 600; margin-bottom: 0.4rem; }
+    .tide-pop-arrow { display: block; margin: 0 auto 0.4rem; height: 96px; }
+    .tide-pop-meta { margin-bottom: 0.7rem; font-size: 0.85rem; }
+    .tide-pop-warning { font-size: 0.85rem; color: var(--muted); margin: 0 0 1rem; }
+    .cur-pop-kind { margin-bottom: 0.6rem; }
+    .cur-pop-rose { display: block; margin: 0 auto 0.5rem; }
+    .cur-pop-speed { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .cur-pop-dir { margin-bottom: 0.4rem; }
+    .cur-pop-source { font-size: 0.85rem; margin: 0 0 1rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div class="brand" id="brand">
+        <img src="icons/icon.svg" alt="" class="brand-icon" />
+        <h1><span class="t-geal">Geal</span><span class="t-ach">ach</span></h1>
+      </div>
+      <p class="tagline">What the sea is doing at a coastal place.</p>
+    </header>
+
+    <form id="search" role="search">
+      <input id="q" type="search" inputmode="search" autocomplete="off"
+             placeholder="Place name, or 53.27, -9.05" aria-label="Place name or coordinates" />
+      <button type="button" id="map-toggle" class="secondary" aria-expanded="false">Map</button>
+    </form>
+
+    <div id="map-card" class="card hidden">
+      <div id="map" aria-label="Map"></div>
+      <button id="locate" class="locate" type="button" title="Go to my location">📍</button>
+      <p class="muted">Tap the coast to get the tide there. Map data © OpenStreetMap contributors.</p>
+    </div>
+
+    <section id="summary" class="card hidden">
+      <div class="sum-head">
+        <div>
+          <div id="sum-name" class="sum-name" role="button" tabindex="0" title="Show on map"></div>
+          <button id="sum-locate" class="sum-locate" type="button" title="Show on map" aria-label="Show on map">
+            <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+              <path fill="currentColor" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+            </svg>
+            <span>Map</span>
+          </button>
+        </div>
+        <div class="sum-right">
+          <button id="sum-current" class="sum-current" type="button" title="Current details" aria-label="Current details" hidden>
+            <svg id="sum-current-rose" viewBox="0 0 34 34" width="40" height="40" aria-hidden="true"></svg>
+            <span id="sum-current-speed" class="sum-current-speed"></span>
+          </button>
+          <div class="sum-moon">
+            <button id="sum-moon" class="sum-moon-btn" type="button" title="Moon details" aria-label="Moon details">
+              <svg id="sum-moon-glyph" viewBox="0 0 64 64" width="40" height="40" aria-hidden="true"></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <svg id="sum-curve" viewBox="0 0 360 150" role="button" tabindex="0" aria-label="Tide details"></svg>
+      <div class="sum-turns">
+        <div class="sum-turn" id="sum-high"></div>
+        <div class="sum-turn" id="sum-low"></div>
+      </div>
+    </section>
+
+    <div class="card">
+      <h2>Moon</h2>
+      <button class="moon-row moon-btn" id="moon-open" type="button" title="Moon details" aria-label="Moon details">
+        <svg id="moon-glyph" viewBox="0 0 64 64" width="52" height="52" aria-hidden="true"></svg>
+        <div>
+          <div id="moon-name" class="moon-name"></div>
+          <div id="moon-detail" class="muted"></div>
+        </div>
+      </button>
+    </div>
+
+    <div id="favourites-card" class="card">
+      <h2>Favourites</h2>
+      <ul id="favourites-list" class="faves"></ul>
+    </div>
+
+    <div id="choices" class="choices hidden" aria-label="Matching places"></div>
+    <div id="offline" class="warning hidden">Offline — showing the last fetched prediction.</div>
+    <p id="status" class="status hidden" role="status"></p>
+
+    <section id="result" class="hidden">
+      <div id="where" class="card">
+        <div class="where-row">
+          <div id="where-text" style="font-size:1.05rem"></div>
+          <button id="heart" class="heart" type="button" aria-label="Save to favourites" hidden>♡</button>
+        </div>
+      </div>
+      <div id="warning" class="warning hidden"></div>
+
+      <div class="card now">
+        <div class="datum-row">
+          <span id="datum-label" class="dat"></span>
+          <button id="datum-toggle" class="hidden" type="button"></button>
+        </div>
+        <div class="big"><span id="height-now">—</span><span class="unit"> m</span></div>
+        <div id="state-now" class="state"></div>
+      </div>
+
+      <div class="card">
+        <h2>Next turns</h2>
+        <div id="turns"></div>
+      </div>
+
+      <div class="card">
+        <h2>Springs / neaps</h2>
+        <div id="springs"></div>
+      </div>
+
+      <div class="card">
+        <h2>Next few hours</h2>
+        <svg id="curve" viewBox="0 0 360 130" role="button" tabindex="0" aria-label="Tide details"></svg>
+        <p id="curve-note" class="muted" style="margin-bottom:0"></p>
+      </div>
+
+      <div class="card hidden" id="currents-card">
+        <h2>Current — model output</h2>
+        <div id="currents"></div>
+      </div>
+
+      <div class="card hidden" id="surge-card">
+        <h2>Surge — observed, separate from the prediction</h2>
+        <div id="surge"></div>
+      </div>
+
+      <div id="provenance" class="muted provenance"></div>
+    </section>
+
+    <footer>
+      <p id="attribution" class="muted"></p>
+      <p class="notice">Not for navigation. Predictions exclude storm surge. Modelled currents are model output, not observations.</p>
+    </footer>
+  </main>
+
+  <div id="tide-overlay" class="overlay hidden">
+    <div class="overlay-panel">
+      <h2 id="tide-pop-name"></h2>
+      <div id="tide-pop-source" class="muted tide-pop-source"></div>
+      <div id="tide-pop-spring" class="tide-pop-spring"></div>
+      <div id="tide-pop-next" class="tide-pop-next"></div>
+      <svg id="tide-pop-arrow" class="tide-pop-arrow" viewBox="0 0 32 96" aria-hidden="true"></svg>
+      <div id="tide-pop-state" class="tide-pop-state"></div>
+      <div id="tide-pop-meta" class="muted tide-pop-meta"></div>
+      <p class="tide-pop-warning">Not for navigation. Predictions exclude storm surge. Modelled currents are model output, not observations.</p>
+      <button class="info-close" type="button" id="tide-close">Close</button>
+    </div>
+  </div>
+
+  <div id="moon-overlay" class="overlay hidden">
+    <div class="overlay-panel">
+      <svg id="moon-pop-glyph" class="moon-pop-glyph" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true"></svg>
+      <h2 id="moon-pop-name"></h2>
+      <div id="moon-pop-detail" class="moon-pop-detail"></div>
+      <div id="moon-pop-next" class="moon-next"></div>
+      <button class="info-close" type="button" id="moon-close">Close</button>
+    </div>
+  </div>
+
+  <div id="current-overlay" class="overlay hidden">
+    <div class="overlay-panel">
+      <h2 id="cur-pop-name"></h2>
+      <div id="cur-pop-kind" class="muted cur-pop-kind">Current — model output</div>
+      <svg id="cur-pop-rose" class="cur-pop-rose" viewBox="0 0 34 34" width="64" height="64" aria-hidden="true"></svg>
+      <div id="cur-pop-speed" class="cur-pop-speed"></div>
+      <div id="cur-pop-dir" class="muted cur-pop-dir"></div>
+      <p id="cur-pop-source" class="muted cur-pop-source"></p>
+      <button class="info-close" type="button" id="current-close">Close</button>
+    </div>
+  </div>
+
+  <div id="info-overlay" class="overlay hidden">
+    <div class="overlay-panel">
+      <img src="icons/icon.svg" alt="" class="info-icon" />
+      <h2><span class="t-geal">Geal</span><span class="t-ach">ach</span></h2>
+      <div class="info-version" id="info-version"></div>
+      <div class="info-tagline">Tides for a coastal place.</div>
+      <a class="info-link" href="https://github.com/ptaylor/gealach/issues/new?template=bug-report.md" target="_blank" rel="noopener">🐛 Report a bug</a>
+      <a class="info-link" href="https://github.com/ptaylor/gealach/issues/new?template=data-inaccuracy.md" target="_blank" rel="noopener">⚠️ Report a data inaccuracy</a>
+      <a class="info-link" href="https://github.com/ptaylor/gealach/issues/new?template=feature-request.md" target="_blank" rel="noopener">💡 Suggest a feature</a>
+      <button class="info-close" type="button" id="info-close">Close</button>
+    </div>
+  </div>
+
+  <script src="vendor/leaflet/leaflet.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
