@@ -3,17 +3,17 @@ set -euo pipefail
 
 # Publish Gealach to GitHub Pages.
 #
-# This repo is already a static site at the repo root — there is no build step,
-# no version injection and no output directory, so "publishing" is just a
-# version tag plus a push. GitHub Pages must be pointed at the main branch root
-# once, in the repository settings:
+# This repo is already a static site at the repo root — there is no build step
+# and no output directory, so "publishing" is a version tag plus a push. The
+# only stamped value is the version <meta> in index.html, which the about
+# overlay reads; publish.sh bumps it to match the tag.
 #
 #   Settings → Pages → Build and deployment → Source: Deploy from a branch
 #   Branch: main, /(root)
 #
 # Usage:
 #   ./publish.sh --no-push   # show the next version and URL without touching git
-#   ./publish.sh             # tag vX.(Y+1), push main and the tag
+#   ./publish.sh             # stamp version, tag vX.(Y+1), push main and the tag
 
 NO_PUSH=false
 if [[ "${1:-}" == "--no-push" ]]; then
@@ -41,6 +41,14 @@ fi
 if [[ -n "$(git status --porcelain)" ]]; then
   echo "Working tree is not clean — commit or stash before publishing." >&2
   exit 1
+fi
+
+# Stamp the version into the page so the about overlay can show it.
+sed -i.bak "s|content=\"v[0-9][0-9.]*\"|content=\"${NEXT_VERSION}\"|" index.html
+rm -f index.html.bak
+if ! git diff --quiet index.html; then
+  git add index.html
+  git commit -m "Bump version to ${NEXT_VERSION}"
 fi
 
 git tag -a "$NEXT_VERSION" -m "Release ${NEXT_VERSION}"

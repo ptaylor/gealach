@@ -41,7 +41,7 @@ tag plus a push. Point GitHub Pages at the `main` branch root once
 (Settings → Pages → Deploy from a branch → `main`, `/(root)`), then:
 
 ```sh
-./publish.sh        # tags vX.(Y+1), pushes main and the tag
+./publish.sh        # stamps the version, tags vX.(Y+1), pushes main and the tag
 ```
 
 The site is then served at <https://ptaylor.github.io/gealach/>.

@@ -59,6 +59,16 @@ async function init() {
   $("map-toggle").addEventListener("click", toggleMap);
   $("heart").addEventListener("click", toggleFavourite);
   $("locate").addEventListener("click", locateMe);
+  $("info-close").addEventListener("click", closeInfo);
+  $("info-overlay").addEventListener("click", (e) => {
+    if (e.target === $("info-overlay")) closeInfo();
+  });
+  const brand = $("brand");
+  brand.addEventListener("pointerdown", startInfoHold);
+  brand.addEventListener("pointerup", cancelInfoHold);
+  brand.addEventListener("pointerleave", cancelInfoHold);
+  brand.addEventListener("pointercancel", cancelInfoHold);
+  brand.addEventListener("contextmenu", (e) => e.preventDefault());
   $("attribution").textContent = ATTRIBUTION;
 
   // Vendored snapshots. A failed fetch degrades gracefully: no station list
@@ -856,6 +866,37 @@ function goFavourite(f) {
   placeLabel = f.name;
   setStatus("Fetching tides…");
   load({ latitude: f.latitude, longitude: f.longitude });
+}
+
+// ---------------------------------------------------------------------------
+// about overlay (long-press the title/icon)
+
+let infoHoldTimer = null;
+
+function startInfoHold() {
+  cancelInfoHold();
+  infoHoldTimer = setTimeout(openInfo, 800);
+}
+
+function cancelInfoHold() {
+  if (infoHoldTimer) {
+    clearTimeout(infoHoldTimer);
+    infoHoldTimer = null;
+  }
+}
+
+function openInfo() {
+  $("info-version").textContent = versionText();
+  $("info-overlay").classList.remove("hidden");
+}
+
+function closeInfo() {
+  $("info-overlay").classList.add("hidden");
+}
+
+function versionText() {
+  const meta = document.querySelector('meta[name="version"]');
+  return meta ? `Version ${meta.content}` : "Version unknown";
 }
 
 // ---------------------------------------------------------------------------

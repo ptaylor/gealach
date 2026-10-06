@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#0b6bcb" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)" />
   <meta name="description" content="What the sea is doing at a coastal place: tide height and state now, the next high and low, the range, and the modelled current." />
+  <meta name="version" content="v0.3" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
   <link rel="icon" href="icons/icon-192.png" type="image/png" sizes="192x192" />
@@ -148,12 +149,22 @@
     footer .notice { color: var(--muted); border-top: 1px solid var(--border); padding-top: 0.6rem; }
     .muted { color: var(--muted); }
     .hidden { display: none; }
+
+    .brand { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; cursor: default; }
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; z-index: 2000; padding: 1.2rem; }
+    .overlay.hidden { display: none; }
+    .overlay-panel { background: var(--card); color: var(--fg); border: 1px solid var(--border); border-radius: 16px; padding: 1.5rem; max-width: 22rem; width: 100%; text-align: center; box-shadow: 0 12px 40px rgba(0,0,0,.4); }
+    .overlay-panel h2 { margin: 0 0 0.3rem; font-size: 1.4rem; }
+    .info-version { color: var(--muted); margin-bottom: 0.5rem; }
+    .info-tagline { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.1rem; }
+    .info-link { display: block; color: var(--accent); margin-bottom: 1rem; }
+    .info-close { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 0.5rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer; }
   </style>
 </head>
 <body>
   <main>
     <header>
-      <div class="brand">
+      <div class="brand" id="brand">
         <img src="icons/icon.svg" alt="" class="brand-icon" />
         <h1><span class="t-geal">Geal</span><span class="t-ach">ach</span></h1>
       </div>
@@ -245,6 +256,16 @@
       <p class="notice">Not for navigation. Predictions exclude storm surge. Modelled currents are model output, not observations.</p>
     </footer>
   </main>
+
+  <div id="info-overlay" class="overlay hidden">
+    <div class="overlay-panel">
+      <h2>Gealach</h2>
+      <div class="info-version" id="info-version"></div>
+      <div class="info-tagline">Tides for a coastal place.</div>
+      <a class="info-link" href="https://github.com/ptaylor/gealach/issues" target="_blank" rel="noopener">🐛 Report a bug / suggest a feature</a>
+      <button class="info-close" type="button" id="info-close">Close</button>
+    </div>
+  </div>
 
   <script src="vendor/leaflet/leaflet.js"></script>
   <script type="module" src="js/app.js"></script>

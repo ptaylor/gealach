@@ -358,7 +358,7 @@ Two platform traps to remember, both of which cost an afternoon if forgotten:
 | Unit tests | `npm test` (which is `node --test`, no dependencies) |
 | Refresh station list | `./tools/refresh-stations.sh` |
 | Regenerate icons | `./tools/make-icons.sh` |
-| Publish to GitHub Pages | `./publish.sh` (tags `vX.(Y+1)`, pushes main + tag; Pages must be set to the `main` branch root once) |
+| Publish to GitHub Pages | `./publish.sh` (stamps the version, tags `vX.(Y+1)`, pushes main + tag; Pages must be set to the `main` branch root once) |
 | Check a source by hand | see the recorded queries under *Data sources* above |
 
 `package.json` exists only to set `"type": "module"` and the test script. It
