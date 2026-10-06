@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0b6bcb" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)" />
   <meta name="description" content="What the sea is doing at a coastal place: tide height and state now, the next high and low, the range, and the modelled current." />
-  <meta name="version" content="v0.3" />
+  <meta name="version" content="v0.4" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
   <link rel="icon" href="icons/icon-192.png" type="image/png" sizes="192x192" />
@@ -89,7 +89,7 @@
     .moon-name { font-size: 1.15rem; font-weight: 600; }
     .moon-btn { width: 100%; appearance: none; -webkit-appearance: none; background: none; border: 0; padding: 0; text-align: left; color: inherit; font: inherit; cursor: pointer; }
     .sum-moon-btn { display: flex; appearance: none; -webkit-appearance: none; background: none; border: 0; padding: 0; cursor: pointer; }
-    .sum-right { display: flex; align-items: center; gap: 0.8rem; flex: none; margin-right: 0.4rem; }
+    .sum-right { display: flex; align-items: center; gap: 1.4rem; flex: none; margin-right: 0.4rem; }
     .sum-current { display: flex; align-items: center; gap: 0.25rem; appearance: none; -webkit-appearance: none; background: none; border: 0; padding: 0; cursor: pointer; color: inherit; font: inherit; }
     .sum-current-speed { font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 
@@ -182,12 +182,14 @@
     .moon-next { margin-bottom: 1rem; font-size: 0.92rem; }
     .moon-next div { margin: 0.15rem 0; }
     .tide-pop-source { margin-bottom: 0.6rem; font-size: 0.92rem; }
+    .tide-pop-warn { color: var(--warn); font-size: 0.92rem; margin-bottom: 0.5rem; }
     .tide-pop-spring { margin-bottom: 0.3rem; }
     .tide-pop-next { margin-bottom: 0.5rem; font-size: 0.92rem; }
     .tide-pop-next div { margin: 0.1rem 0; }
     .tide-pop-state { font-size: 1.15rem; font-weight: 600; margin-bottom: 0.4rem; }
     .tide-pop-arrow { display: block; margin: 0 auto 0.4rem; height: 96px; }
     .tide-pop-meta { margin-bottom: 0.7rem; font-size: 0.85rem; }
+    .tide-pop-surge { font-size: 0.92rem; margin-bottom: 0.5rem; }
     .tide-pop-warning { font-size: 0.85rem; color: var(--muted); margin: 0 0 1rem; }
     .cur-pop-kind { margin-bottom: 0.6rem; }
     .cur-pop-rose { display: block; margin: 0 auto 0.5rem; }
@@ -325,11 +327,13 @@
     <div class="overlay-panel">
       <h2 id="tide-pop-name"></h2>
       <div id="tide-pop-source" class="muted tide-pop-source"></div>
+      <div id="tide-pop-warn" class="tide-pop-warn hidden"></div>
       <div id="tide-pop-spring" class="tide-pop-spring"></div>
       <div id="tide-pop-next" class="tide-pop-next"></div>
       <svg id="tide-pop-arrow" class="tide-pop-arrow" viewBox="0 0 32 96" aria-hidden="true"></svg>
       <div id="tide-pop-state" class="tide-pop-state"></div>
       <div id="tide-pop-meta" class="muted tide-pop-meta"></div>
+      <div id="tide-pop-surge" class="tide-pop-surge hidden"></div>
       <p class="tide-pop-warning">Not for navigation. Predictions exclude storm surge. Modelled currents are model output, not observations.</p>
       <button class="info-close" type="button" id="tide-close">Close</button>
     </div>
