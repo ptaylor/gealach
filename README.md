@@ -37,12 +37,12 @@ It is a PWA. Serve it over HTTPS (GitHub Pages works; `file://` and
 ## Publish
 
 The app is already a static site, so publishing is a version tag plus a push
-of a fixed file whitelist to the `gh-pages` branch — `main` is the working
-branch and is never published directly. Point GitHub Pages at `gh-pages` once
-(Settings → Pages → Deploy from a branch → `gh-pages`, `/(root)`), then:
+of a fixed file whitelist to the `public` branch — `main` is the working
+branch and is never published directly. Point GitHub Pages at `public` once
+(Settings → Pages → Deploy from a branch → `public`, `/(root)`), then:
 
 ```sh
-./publish.sh        # stamps the version, tags vX.(Y+1), pushes main + tag + gh-pages
+./publish.sh        # stamps the version, tags vX.(Y+1), pushes main + tag + public
 ```
 
 The site is then served at <https://ptaylor.github.io/gealach/>.

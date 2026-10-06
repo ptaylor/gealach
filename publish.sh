@@ -6,11 +6,11 @@ set -euo pipefail
 # `main` is the working branch and is never published directly — a push to
 # main does not touch the live site. This script stamps the version <meta> in
 # index.html, tags the release on main, and publishes a fixed whitelist of
-# static site files to a separate `gh-pages` branch (so tools/, test/, docs/
+# static site files to a separate `public` branch (so tools/, test/, docs/
 # and .github/ never reach the web).
 #
 #   Settings → Pages → Build and deployment → Source: Deploy from a branch
-#   Branch: gh-pages, /(root)
+#   Branch: public, /(root)
 #
 # Usage:
 #   ./publish.sh --no-push   # show the next version and URL without touching git
@@ -20,7 +20,7 @@ NO_PUSH=false
 [[ "${1:-}" == "--no-push" ]] && NO_PUSH=true
 
 URL="https://ptaylor.github.io/gealach/"
-PAGES_BRANCH="gh-pages"
+PAGES_BRANCH="public"
 
 # Everything the browser loads at run time. `data/` is included so the vendored
 # station snapshot is published once it exists; until then it is empty and
