@@ -58,6 +58,7 @@ async function init() {
   $("datum-toggle").addEventListener("click", toggleDatum);
   $("map-toggle").addEventListener("click", toggleMap);
   $("heart").addEventListener("click", toggleFavourite);
+  $("locate").addEventListener("click", locateMe);
   $("attribution").textContent = ATTRIBUTION;
 
   // Vendored snapshots. A failed fetch degrades gracefully: no station list
@@ -136,14 +137,50 @@ function placeMarker(lat, lon) {
 }
 
 async function onMapClick(e) {
-  const lat = e.latlng.lat;
-  const lon = e.latlng.lng;
+  resolvePoint(e.latlng.lat, e.latlng.lng);
+}
+
+function locateMe() {
+  if (!navigator.geolocation) {
+    setStatus("Location is not available in this browser.");
+    return;
+  }
+  const btn = $("locate");
+  btn.disabled = true;
+  setStatus("Finding your location…");
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      btn.disabled = false;
+      const { latitude: lat, longitude: lon } = pos.coords;
+      initMap();
+      map.setView([lat, lon], 12);
+      resolvePoint(lat, lon);
+    },
+    (err) => {
+      btn.disabled = false;
+      setStatus(geolocationError(err));
+    },
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 },
+  );
+}
+
+function geolocationError(err) {
+  if (err.code === 1) return "Location permission denied — allow access and try again.";
+  if (err.code === 2) return "Location unavailable right now — try again.";
+  if (err.code === 3) return "Location request timed out — try again.";
+  return "Could not get your location.";
+}
+
+function resolvePoint(lat, lon) {
   placeMarker(lat, lon);
   hideChoices();
   $("result").classList.add("hidden");
   setStatus("Fetching tides…");
   abort();
+  namePoint(lat, lon);
+}
 
+async function namePoint(lat, lon) {
   let label = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
   try {
     const [tz, place] = await Promise.all([
