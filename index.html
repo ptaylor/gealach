@@ -142,6 +142,16 @@
     .curve-line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; }
     .curve-now { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
     .curve-label { fill: var(--muted); font-size: 10px; }
+    .curve-fill { fill: var(--accent); opacity: 0.08; }
+
+    .sum-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.8rem; margin-bottom: 0.2rem; }
+    .sum-name { font-size: 1.2rem; font-weight: 700; }
+    .sum-coords { font-size: 0.85rem; }
+    .sum-moon { display: flex; align-items: center; gap: 0.45rem; flex: none; }
+    .sum-moon-text { font-size: 0.85rem; color: var(--muted); white-space: nowrap; }
+    svg#sum-curve { width: 100%; height: auto; display: block; }
+    .sum-turns { display: flex; justify-content: space-between; gap: 1rem; margin-top: 0.2rem; }
+    .sum-turn { font-size: 0.95rem; font-variant-numeric: tabular-nums; }
 
     .current-big { font-size: 2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
     .provenance { font-size: 0.85rem; }
@@ -183,6 +193,24 @@
       <button id="locate" class="locate" type="button" title="Go to my location">📍</button>
       <p class="muted">Tap the coast to get the tide there. Map data © OpenStreetMap contributors.</p>
     </div>
+
+    <section id="summary" class="card hidden">
+      <div class="sum-head">
+        <div>
+          <div id="sum-name" class="sum-name"></div>
+          <div id="sum-coords" class="muted sum-coords"></div>
+        </div>
+        <div class="sum-moon">
+          <svg id="sum-moon-glyph" viewBox="0 0 64 64" width="30" height="30" aria-hidden="true"></svg>
+          <span id="sum-moon-text" class="sum-moon-text"></span>
+        </div>
+      </div>
+      <svg id="sum-curve" viewBox="0 0 360 150" role="img" aria-label="Tide curve"></svg>
+      <div class="sum-turns">
+        <div class="sum-turn" id="sum-high"></div>
+        <div class="sum-turn" id="sum-low"></div>
+      </div>
+    </section>
 
     <div class="card">
       <h2>Moon</h2>

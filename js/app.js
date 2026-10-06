@@ -394,6 +394,7 @@ function render() {
     `fetched ${fmtDayTime(r.fetchedAt, zone)} (${zoneAbbr}, ${zoneOffset})`;
 
   renderHeart();
+  renderSummary();
 }
 
 function activeSeries(r) {
@@ -897,6 +898,127 @@ function closeInfo() {
 function versionText() {
   const meta = document.querySelector('meta[name="version"]');
   return meta ? `Version ${meta.content}` : "Version unknown";
+}
+
+// ---------------------------------------------------------------------------
+// summary panel
+
+function renderSummary() {
+  const r = tideResult;
+  if (!r) return;
+  const now = new Date();
+  $("summary").classList.remove("hidden");
+
+  $("sum-name").textContent = placeLabel;
+  $("sum-coords").textContent = currentPoint
+    ? `${currentPoint.latitude.toFixed(4)}, ${currentPoint.longitude.toFixed(4)}`
+    : "";
+
+  const phase = lunarPhase(now);
+  $("sum-moon-glyph").innerHTML = moonGlyph(phase, 64);
+  $("sum-moon-text").textContent = phase.name;
+
+  const series = activeSeries(r);
+  const turns = nextTurns(r.extremes, now);
+  drawSummaryCurve(series, now, turns);
+
+  const hasODM = Array.isArray(r.seriesODM) && r.seriesODM.length > 0;
+  $("sum-high").textContent = summaryTurnText("High", turns.nextHigh, hasODM);
+  $("sum-low").textContent = summaryTurnText("Low", turns.nextLow, hasODM);
+}
+
+function summaryTurnText(label, t, hasODM) {
+  if (!t) return `${label} —`;
+  const h =
+    datumChoice === "ODM" && hasODM && t.heightODM != null ? t.heightODM : t.height;
+  return `${label} ${fmtClock(t.time, zone)} · ${fmtDur(t.minutesTo)} · ${m(h)} m`;
+}
+
+function seriesHeightAt(series, tMs) {
+  for (let i = 0; i < series.length - 1; i += 1) {
+    const t1 = Date.parse(series[i].time);
+    const t2 = Date.parse(series[i + 1].time);
+    if (tMs < t1 || tMs > t2) continue;
+    const h1 = series[i].height;
+    const h2 = series[i + 1].height;
+    if (h1 == null || h2 == null) return null;
+    const dt = t2 - t1;
+    return dt <= 0 ? h1 : h1 + (h2 - h1) * ((tMs - t1) / dt);
+  }
+  return null;
+}
+
+function drawSummaryCurve(series, now, turns) {
+  const svg = $("sum-curve");
+  const W = 360;
+  const H = 150;
+  const padTop = 16;
+  const padBottom = 26;
+  const padLeft = 8;
+  const padRight = 8;
+  const nowMs = now.getTime();
+  const from = nowMs - 2 * 3600000;
+  const to = nowMs + 12 * 3600000;
+
+  const win = series.filter((p) => {
+    const t = Date.parse(p.time);
+    return t >= from && t <= to;
+  });
+
+  if (win.length < 2) {
+    svg.innerHTML =
+      `<text class="curve-label" x="180" y="75" text-anchor="middle">No tide data for this window</text>`;
+    return;
+  }
+
+  let min = Infinity;
+  let max = -Infinity;
+  for (const p of win) {
+    if (p.height != null) {
+      if (p.height < min) min = p.height;
+      if (p.height > max) max = p.height;
+    }
+  }
+  if (!Number.isFinite(min)) {
+    svg.innerHTML = "";
+    return;
+  }
+  const pad = (max - min) * 0.2 || 0.5;
+  min -= pad;
+  max += pad;
+
+  const x = (t) => padLeft + ((t - from) / (to - from)) * (W - padLeft - padRight);
+  const y = (h) => padTop + (1 - (h - min) / (max - min)) * (H - padTop - padBottom);
+
+  const pts = win
+    .map((p) => `${x(Date.parse(p.time)).toFixed(1)},${y(p.height).toFixed(1)}`)
+    .join(" ");
+
+  let inner = "";
+  inner +=
+    `<polygon class="curve-fill" points="${pts} ${x(to).toFixed(1)},${H - padBottom} ${x(from).toFixed(1)},${H - padBottom}" />`;
+  inner += `<polyline class="curve-line" points="${pts}" />`;
+
+  const nowX = x(nowMs);
+  inner += `<line class="curve-now" x1="${nowX.toFixed(1)}" y1="${padTop}" x2="${nowX.toFixed(1)}" y2="${H - padBottom}" />`;
+  inner += `<text class="curve-label" x="${nowX.toFixed(1)}" y="${padTop - 4}" text-anchor="middle">NOW</text>`;
+
+  for (const [letter, turn] of [["H", turns.nextHigh], ["L", turns.nextLow]]) {
+    if (!turn) continue;
+    const tm = Date.parse(turn.time);
+    if (tm < from || tm > to) continue;
+    const h = seriesHeightAt(series, tm);
+    if (h == null) continue;
+    const mx = x(tm);
+    const my = y(h);
+    inner += `<circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="4" fill="var(--accent)" stroke="var(--card)" stroke-width="1.5" />`;
+    inner += `<text class="curve-label" x="${mx.toFixed(1)}" y="${my - 8}" text-anchor="middle">${letter}</text>`;
+  }
+
+  inner += `<text class="curve-label" x="${padLeft}" y="${H - 8}" text-anchor="start">${fmtClock(iso(new Date(from)), zone)}</text>`;
+  inner += `<text class="curve-label" x="${W - padRight}" y="${H - 8}" text-anchor="end">${fmtClock(iso(new Date(to)), zone)}</text>`;
+
+  svg.innerHTML = inner;
 }
 
 // ---------------------------------------------------------------------------
