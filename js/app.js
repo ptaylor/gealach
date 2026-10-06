@@ -11,6 +11,7 @@ import {
   nearestCurrent,
   compassPoint,
   lunarPhase,
+  nextMoonEvents,
   MAX_STATION_DISTANCE_KM,
 } from "./tide.js";
 import {
@@ -58,6 +59,12 @@ async function init() {
   $("datum-toggle").addEventListener("click", toggleDatum);
   $("map-toggle").addEventListener("click", toggleMap);
   $("sum-locate").addEventListener("click", showOnMap);
+  $("sum-moon").addEventListener("click", openMoon);
+  $("moon-open").addEventListener("click", openMoon);
+  $("moon-close").addEventListener("click", closeMoon);
+  $("moon-overlay").addEventListener("click", (e) => {
+    if (e.target === $("moon-overlay")) closeMoon();
+  });
   $("heart").addEventListener("click", toggleFavourite);
   $("locate").addEventListener("click", locateMe);
   $("info-close").addEventListener("click", closeInfo);
@@ -615,6 +622,33 @@ function toggleDatum() {
 // ---------------------------------------------------------------------------
 // moon phase
 
+function openMoon() {
+  const now = new Date();
+  const phase = lunarPhase(now);
+  const ev = nextMoonEvents(now);
+  $("moon-pop-glyph").innerHTML = moonGlyph(phase, 64);
+  $("moon-pop-name").textContent = phase.name;
+  $("moon-pop-detail").textContent =
+    `${phase.waxing ? "Waxing" : "Waning"} · ` +
+    `${Math.round(phase.illuminated * 100)}% illuminated · ` +
+    `${phase.ageDays.toFixed(1)} days old`;
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  $("moon-pop-next").innerHTML =
+    `<div>Next full moon: <strong>${fmtDayTime(ev.nextFull.toISOString(), tz)}</strong> (${moonIn(ev.nextFull, now)})</div>` +
+    `<div>Next new moon: <strong>${fmtDayTime(ev.nextNew.toISOString(), tz)}</strong> (${moonIn(ev.nextNew, now)})</div>`;
+  $("moon-overlay").classList.remove("hidden");
+}
+
+function closeMoon() {
+  $("moon-overlay").classList.add("hidden");
+}
+
+function moonIn(d, now) {
+  const days = (d.getTime() - now.getTime()) / 86400000;
+  if (days < 1) return `in ${Math.max(0, Math.round(days * 24))} h`;
+  return `in ${days.toFixed(1)} days`;
+}
+
 function renderMoon() {
   const phase = lunarPhase(new Date());
   $("moon-glyph").innerHTML = moonGlyph(phase);
@@ -947,7 +981,6 @@ function renderSummary() {
 
   const phase = lunarPhase(now);
   $("sum-moon-glyph").innerHTML = moonGlyph(phase, 64);
-  $("sum-moon-text").textContent = phase.name;
 
   const series = activeSeries(r);
   const turns = nextTurns(r.extremes, now);

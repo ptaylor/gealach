@@ -258,3 +258,19 @@ export function lunarPhase(now = new Date()) {
   };
 }
 
+/**
+ * The next new-moon and full-moon instants, from the same synodic-month
+ * arithmetic as lunarPhase. Both are strictly in the future.
+ */
+export function nextMoonEvents(now = new Date()) {
+  const t = new Date(now).getTime();
+  const p = lunarPhase(t);
+  const toFull =
+    (p.fraction < 0.5 ? 0.5 - p.fraction : 1.5 - p.fraction) * SYNODIC_MONTH_MS;
+  const toNew = (1 - p.fraction) * SYNODIC_MONTH_MS;
+  return {
+    nextFull: new Date(t + toFull),
+    nextNew: new Date(t + toNew),
+  };
+}
+

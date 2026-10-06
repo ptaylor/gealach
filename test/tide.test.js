@@ -9,6 +9,7 @@ import {
   nearestCurrent,
   compassPoint,
   lunarPhase,
+  nextMoonEvents,
   MAX_STATION_DISTANCE_KM,
 } from "../js/tide.js";
 
@@ -130,6 +131,22 @@ test("lunarPhase names the quarters across a synodic month", () => {
 test("lunarPhase reports waxing before full and waning after", () => {
   assert.equal(lunarPhase("2000-01-14T03:25:00Z").waxing, true);
   assert.equal(lunarPhase("2000-01-28T21:47:00Z").waxing, false);
+});
+
+test("nextMoonEvents: at new moon, full in half a month and new in a full month", () => {
+  const now = new Date("2000-01-06T18:14:00Z");
+  const ev = nextMoonEvents(now);
+  const toFullDays = (ev.nextFull - now) / DAY;
+  const toNewDays = (ev.nextNew - now) / DAY;
+  assert.ok(Math.abs(toFullDays - 14.765) < 0.05, `full in ${toFullDays} days`);
+  assert.ok(Math.abs(toNewDays - 29.53) < 0.05, `new in ${toNewDays} days`);
+});
+
+test("nextMoonEvents: next full is a week away at first quarter", () => {
+  const now = new Date("2000-01-14T03:25:00Z");
+  const ev = nextMoonEvents(now);
+  const toFullDays = (ev.nextFull - now) / DAY;
+  assert.ok(toFullDays > 7 && toFullDays < 8, `full in ${toFullDays} days`);
 });
 
 // One high and one low per day, range following a ~14.8-day spring/neap cycle

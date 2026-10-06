@@ -87,6 +87,8 @@
 
     .moon-row { display: flex; align-items: center; gap: 0.9rem; }
     .moon-name { font-size: 1.15rem; font-weight: 600; }
+    .moon-btn { width: 100%; appearance: none; -webkit-appearance: none; background: none; border: 0; padding: 0; text-align: left; color: inherit; font: inherit; cursor: pointer; }
+    .sum-moon-btn { display: flex; appearance: none; -webkit-appearance: none; background: none; border: 0; padding: 0; cursor: pointer; }
 
     .where-row { display: flex; align-items: flex-start; gap: 0.6rem; }
     .where-row #where-text { flex: 1; }
@@ -149,7 +151,6 @@
     .sum-locate { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.1rem 0 0; border: 0; background: none; cursor: pointer; color: var(--accent); font-size: 0.85rem; }
     .sum-locate:hover { text-decoration: underline; }
     .sum-moon { display: flex; align-items: center; gap: 0.45rem; flex: none; }
-    .sum-moon-text { font-size: 0.85rem; color: var(--muted); white-space: nowrap; }
     svg#sum-curve { width: 100%; height: auto; display: block; }
     .sum-turns { display: flex; justify-content: space-between; gap: 1rem; margin-top: 0.2rem; }
     .sum-turn { font-size: 0.95rem; font-variant-numeric: tabular-nums; }
@@ -171,6 +172,10 @@
     .info-tagline { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.1rem; }
     .info-link { display: block; color: var(--accent); margin-bottom: 1rem; }
     .info-close { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 0.5rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer; }
+    .moon-pop-glyph { display: block; margin: 0 auto 0.6rem; }
+    .moon-pop-detail { color: var(--muted); margin-bottom: 0.6rem; }
+    .moon-next { margin-bottom: 1rem; font-size: 0.92rem; }
+    .moon-next div { margin: 0.15rem 0; }
   </style>
 </head>
 <body>
@@ -208,8 +213,9 @@
           </button>
         </div>
         <div class="sum-moon">
-          <svg id="sum-moon-glyph" viewBox="0 0 64 64" width="30" height="30" aria-hidden="true"></svg>
-          <span id="sum-moon-text" class="sum-moon-text"></span>
+          <button id="sum-moon" class="sum-moon-btn" type="button" title="Moon details" aria-label="Moon details">
+            <svg id="sum-moon-glyph" viewBox="0 0 64 64" width="30" height="30" aria-hidden="true"></svg>
+          </button>
         </div>
       </div>
       <svg id="sum-curve" viewBox="0 0 360 150" role="img" aria-label="Tide curve"></svg>
@@ -221,13 +227,13 @@
 
     <div class="card">
       <h2>Moon</h2>
-      <div class="moon-row">
+      <button class="moon-row moon-btn" id="moon-open" type="button" title="Moon details" aria-label="Moon details">
         <svg id="moon-glyph" viewBox="0 0 64 64" width="52" height="52" aria-hidden="true"></svg>
         <div>
           <div id="moon-name" class="moon-name"></div>
           <div id="moon-detail" class="muted"></div>
         </div>
-      </div>
+      </button>
     </div>
 
     <div id="favourites-card" class="card">
@@ -291,6 +297,16 @@
       <p class="notice">Not for navigation. Predictions exclude storm surge. Modelled currents are model output, not observations.</p>
     </footer>
   </main>
+
+  <div id="moon-overlay" class="overlay hidden">
+    <div class="overlay-panel">
+      <svg id="moon-pop-glyph" class="moon-pop-glyph" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true"></svg>
+      <h2 id="moon-pop-name"></h2>
+      <div id="moon-pop-detail" class="moon-pop-detail"></div>
+      <div id="moon-pop-next" class="moon-next"></div>
+      <button class="info-close" type="button" id="moon-close">Close</button>
+    </div>
+  </div>
 
   <div id="info-overlay" class="overlay hidden">
     <div class="overlay-panel">
