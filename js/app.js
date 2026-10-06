@@ -86,6 +86,11 @@ async function init() {
   $("tide-overlay").addEventListener("click", (e) => {
     if (e.target === $("tide-overlay")) closeTide();
   });
+  $("sum-current").addEventListener("click", openCurrent);
+  $("current-close").addEventListener("click", closeCurrent);
+  $("current-overlay").addEventListener("click", (e) => {
+    if (e.target === $("current-overlay")) closeCurrent();
+  });
   $("heart").addEventListener("click", toggleFavourite);
   $("locate").addEventListener("click", locateMe);
   $("info-close").addEventListener("click", closeInfo);
@@ -1003,6 +1008,7 @@ function renderSummary() {
 
   const phase = lunarPhase(now);
   $("sum-moon-glyph").innerHTML = moonGlyph(phase, 64);
+  renderCurrentRose(now);
 
   const series = activeSeries(r);
   const turns = nextTurns(r.extremes, now);
@@ -1197,6 +1203,66 @@ function tideArrowSvg(rateMh, rising) {
 /** A short horizontal dash for "steady" — no vertical motion. */
 function steadyArrowSvg() {
   return `<line x1="6" y1="48" x2="26" y2="48" stroke-width="3" stroke-linecap="round" style="stroke:var(--accent)"/>`;
+}
+
+// ---------------------------------------------------------------------------
+// current (water) direction
+
+function renderCurrentRose(now) {
+  const btn = $("sum-current");
+  const currents = currentResult && currentResult.currents;
+  const c = nearestCurrent(currents, now);
+  if (!c || c.speed == null || c.direction == null) {
+    btn.hidden = true;
+    return;
+  }
+  btn.hidden = false;
+  $("sum-current-rose").innerHTML = compassRoseSvg(c.direction);
+  $("sum-current-speed").textContent = `${c.speed.toFixed(1)} m/s`;
+}
+
+function openCurrent() {
+  const now = new Date();
+  const currents = currentResult && currentResult.currents;
+  const c = nearestCurrent(currents, now);
+  if (!c || c.speed == null || c.direction == null) return;
+
+  $("cur-pop-name").textContent = placeLabel;
+  $("cur-pop-rose").innerHTML = compassRoseSvg(c.direction);
+  $("cur-pop-speed").textContent = `${c.speed.toFixed(1)} m/s`;
+  $("cur-pop-dir").textContent =
+    `${compassPoint(c.direction)} (${Math.round(c.direction)}°, heading towards)`;
+  $("cur-pop-source").textContent =
+    `Open-Meteo Marine, ~8 km grid, at ${fmtClock(c.time, zone)} — model output, not suitable for coastal navigation.`;
+  $("current-overlay").classList.remove("hidden");
+}
+
+function closeCurrent() {
+  $("current-overlay").classList.add("hidden");
+}
+
+/** A compass rose with an arrow pointing the way the water is heading. */
+function compassRoseSvg(direction) {
+  const cx = 17, cy = 17, R = 15;
+  const rad = (direction * Math.PI) / 180;
+  const dx = Math.sin(rad);
+  const dy = -Math.cos(rad);
+  const headX = cx + R * dx;
+  const headY = cy + R * dy;
+  const tailX = cx - R * 0.6 * dx;
+  const tailY = cy - R * 0.6 * dy;
+  const bx = headX - R * 0.42 * dx;
+  const by = headY - R * 0.42 * dy;
+  const px = -dy, py = dx;
+  const half = R * 0.28;
+  const b1x = bx + half * px, b1y = by + half * py;
+  const b2x = bx - half * px, b2y = by - half * py;
+  return (
+    `<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke-width="1.5" style="stroke:var(--border)"/>` +
+    `<line x1="${tailX.toFixed(1)}" y1="${tailY.toFixed(1)}" x2="${headX.toFixed(1)}" y2="${headY.toFixed(1)}" stroke-width="2.5" stroke-linecap="round" style="stroke:var(--accent)"/>` +
+    `<polygon points="${headX.toFixed(1)},${headY.toFixed(1)} ${b1x.toFixed(1)},${b1y.toFixed(1)} ${b2x.toFixed(1)},${b2y.toFixed(1)}" style="fill:var(--accent)"/>` +
+    `<text x="${cx}" y="7" text-anchor="middle" font-size="6.5" style="fill:var(--muted)">N</text>`
+  );
 }
 
 // ---------------------------------------------------------------------------

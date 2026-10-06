@@ -89,6 +89,9 @@
     .moon-name { font-size: 1.15rem; font-weight: 600; }
     .moon-btn { width: 100%; appearance: none; -webkit-appearance: none; background: none; border: 0; padding: 0; text-align: left; color: inherit; font: inherit; cursor: pointer; }
     .sum-moon-btn { display: flex; appearance: none; -webkit-appearance: none; background: none; border: 0; padding: 0; cursor: pointer; }
+    .sum-right { display: flex; align-items: center; gap: 0.7rem; flex: none; }
+    .sum-current { display: flex; flex-direction: column; align-items: center; gap: 0.1rem; appearance: none; -webkit-appearance: none; background: none; border: 0; padding: 0; cursor: pointer; color: inherit; font: inherit; }
+    .sum-current-speed { font-size: 0.7rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 
     .where-row { display: flex; align-items: flex-start; gap: 0.6rem; }
     .where-row #where-text { flex: 1; }
@@ -186,6 +189,11 @@
     .tide-pop-arrow { display: block; margin: 0 auto 0.4rem; height: 96px; }
     .tide-pop-meta { margin-bottom: 0.7rem; font-size: 0.85rem; }
     .tide-pop-warning { font-size: 0.85rem; color: var(--muted); margin: 0 0 1rem; }
+    .cur-pop-kind { margin-bottom: 0.6rem; }
+    .cur-pop-rose { display: block; margin: 0 auto 0.5rem; }
+    .cur-pop-speed { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .cur-pop-dir { margin-bottom: 0.4rem; }
+    .cur-pop-source { font-size: 0.85rem; margin: 0 0 1rem; }
   </style>
 </head>
 <body>
@@ -221,10 +229,16 @@
             <span>Map</span>
           </button>
         </div>
-        <div class="sum-moon">
-          <button id="sum-moon" class="sum-moon-btn" type="button" title="Moon details" aria-label="Moon details">
-            <svg id="sum-moon-glyph" viewBox="0 0 64 64" width="30" height="30" aria-hidden="true"></svg>
+        <div class="sum-right">
+          <button id="sum-current" class="sum-current" type="button" title="Current details" aria-label="Current details" hidden>
+            <svg id="sum-current-rose" viewBox="0 0 34 34" width="28" height="28" aria-hidden="true"></svg>
+            <span id="sum-current-speed" class="sum-current-speed"></span>
           </button>
+          <div class="sum-moon">
+            <button id="sum-moon" class="sum-moon-btn" type="button" title="Moon details" aria-label="Moon details">
+              <svg id="sum-moon-glyph" viewBox="0 0 64 64" width="30" height="30" aria-hidden="true"></svg>
+            </button>
+          </div>
         </div>
       </div>
       <svg id="sum-curve" viewBox="0 0 360 150" role="button" tabindex="0" aria-label="Tide details"></svg>
@@ -328,6 +342,18 @@
       <div id="moon-pop-detail" class="moon-pop-detail"></div>
       <div id="moon-pop-next" class="moon-next"></div>
       <button class="info-close" type="button" id="moon-close">Close</button>
+    </div>
+  </div>
+
+  <div id="current-overlay" class="overlay hidden">
+    <div class="overlay-panel">
+      <h2 id="cur-pop-name"></h2>
+      <div id="cur-pop-kind" class="muted cur-pop-kind">Current — model output</div>
+      <svg id="cur-pop-rose" class="cur-pop-rose" viewBox="0 0 34 34" width="64" height="64" aria-hidden="true"></svg>
+      <div id="cur-pop-speed" class="cur-pop-speed"></div>
+      <div id="cur-pop-dir" class="muted cur-pop-dir"></div>
+      <p id="cur-pop-source" class="muted cur-pop-source"></p>
+      <button class="info-close" type="button" id="current-close">Close</button>
     </div>
   </div>
 
