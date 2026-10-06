@@ -59,6 +59,13 @@ async function init() {
   $("datum-toggle").addEventListener("click", toggleDatum);
   $("map-toggle").addEventListener("click", toggleMap);
   $("sum-locate").addEventListener("click", showOnMap);
+  $("sum-name").addEventListener("click", showOnMap);
+  $("sum-name").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      showOnMap();
+    }
+  });
   $("sum-moon").addEventListener("click", openMoon);
   $("moon-open").addEventListener("click", openMoon);
   $("moon-close").addEventListener("click", closeMoon);
