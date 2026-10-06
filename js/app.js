@@ -1128,6 +1128,19 @@ function openTideDetails() {
     `${r.stationName} — ${kindWord}` +
     (r.distanceKm != null ? ` · ${km(r.distanceKm)} from where you asked` : "");
 
+  const warnEl = $("tide-pop-warn");
+  if (r.kind === "global-model") {
+    warnEl.textContent =
+      "Outside the Irish prediction stations — showing the global model (Open-Meteo).";
+    warnEl.classList.remove("hidden");
+  } else if (r.distanceKm != null && r.distanceKm > MAX_STATION_DISTANCE_KM) {
+    warnEl.textContent =
+      `Nearest prediction station is ${km(r.distanceKm)} away — this is not a prediction for here.`;
+    warnEl.classList.remove("hidden");
+  } else {
+    warnEl.classList.add("hidden");
+  }
+
   const spring = rangeAnalysis(r.extremes, now);
   const label =
     spring.label === "springs" ? "springs" :
@@ -1168,7 +1181,19 @@ function openTideDetails() {
     rangeLine = `Predicted range: ${m(Math.abs(hh - hl))} m`;
   }
   $("tide-pop-meta").textContent =
-    `${rangeLine}${rangeLine ? " · " : ""}Datum ${r.datum} · fetched ${fmtDayTime(r.fetchedAt, zone)}`;
+    `${rangeLine}${rangeLine ? " · " : ""}station ${escapeHtml(r.station)} · Datum ${r.datum} · fetched ${fmtDayTime(r.fetchedAt, zone)}`;
+
+  const surgeEl = $("tide-pop-surge");
+  if (surgeResult && surgeResult.series.length) {
+    const latest = surgeResult.series[surgeResult.series.length - 1];
+    surgeEl.innerHTML =
+      `Observed at ${fmtDayTime(latest.time, zone)}:<br>` +
+      `tide <strong>${m(latest.tide)} m</strong> · surge <strong>${m(latest.surge)} m</strong>` +
+      `<div class="muted">The prediction above excludes this surge.</div>`;
+    surgeEl.classList.remove("hidden");
+  } else {
+    surgeEl.classList.add("hidden");
+  }
 
   $("tide-overlay").classList.remove("hidden");
 }
