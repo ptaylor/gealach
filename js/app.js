@@ -1146,10 +1146,11 @@ function openTideDetails() {
   const series = activeSeries(r);
   const st = tideStateAt(series, now);
   if (st && Math.abs(st.rateMh) >= 0.05) {
-    const arrow = st.rising ? "↑" : "↓";
-    $("tide-pop-state").innerHTML =
-      `${arrow} ${st.rising ? "Rising" : "Falling"} at ${Math.abs(st.rateMh).toFixed(1)} m/h · now ${m(st.height)} m`;
+    $("tide-pop-arrow").innerHTML = tideArrowSvg(st.rateMh, st.rising);
+    $("tide-pop-state").textContent =
+      `${st.rising ? "Rising" : "Falling"} at ${Math.abs(st.rateMh).toFixed(1)} m/h · now ${m(st.height)} m`;
   } else {
+    $("tide-pop-arrow").innerHTML = steadyArrowSvg();
     $("tide-pop-state").textContent = "Steady now";
   }
 
@@ -1168,6 +1169,34 @@ function openTideDetails() {
 
 function closeTide() {
   $("tide-overlay").classList.add("hidden");
+}
+
+/** A vertical arrow whose shaft length grows with the rate of rise or fall. */
+function tideArrowSvg(rateMh, rising) {
+  const cx = 16;
+  const maxRate = 1.5; // m/h at which the arrow reaches full length
+  const shaft = Math.min(72, 10 + (Math.abs(rateMh) / maxRate) * 62);
+  let backY, endY, tipY, baseY;
+  if (rising) {
+    backY = 90;
+    endY = 90 - shaft;
+    tipY = endY - 5;
+    baseY = endY + 4;
+  } else {
+    backY = 6;
+    endY = 6 + shaft;
+    tipY = endY + 5;
+    baseY = endY - 4;
+  }
+  return (
+    `<line x1="${cx}" y1="${backY}" x2="${cx}" y2="${endY}" stroke-width="3" stroke-linecap="round" style="stroke:var(--accent)"/>` +
+    `<polygon points="${cx},${tipY} ${cx - 6},${baseY} ${cx + 6},${baseY}" style="fill:var(--accent)"/>`
+  );
+}
+
+/** A short horizontal dash for "steady" — no vertical motion. */
+function steadyArrowSvg() {
+  return `<line x1="6" y1="48" x2="26" y2="48" stroke-width="3" stroke-linecap="round" style="stroke:var(--accent)"/>`;
 }
 
 // ---------------------------------------------------------------------------
