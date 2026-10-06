@@ -343,7 +343,7 @@ Two platform traps to remember, both of which cost an afternoon if forgotten:
 | `data/station-map.json` | The name mapping between the three spellings: `{ prediction, gauge, surge }` per station. Hand-checked, not guessed. |
 | `tools/refresh-stations.sh` | Regenerates `data/stations.json` from ERDDAP (`curl` + `jq`). |
 | `tools/make-icons.sh` | Rasterises `icons/icon.svg` with ImageMagick. |
-| `publish.sh` | Tags a release and pushes; GitHub Pages serves `main` directly (no build). |
+| `publish.sh` | Stamps the version, tags the release, and publishes a fixed file whitelist to the `gh-pages` branch; `main` is never published directly. |
 | `test/` | `node --test` units for `js/tide.js` and `js/sources.js`, with recorded fixtures. |
 | `docs/data-sources.md` | The source contract: endpoints, variables, datums, licences, sample responses. |
 | `docs/derivations.md` | The formulas, including springs/neaps and why not the form factor. |
@@ -358,7 +358,7 @@ Two platform traps to remember, both of which cost an afternoon if forgotten:
 | Unit tests | `npm test` (which is `node --test`, no dependencies) |
 | Refresh station list | `./tools/refresh-stations.sh` |
 | Regenerate icons | `./tools/make-icons.sh` |
-| Publish to GitHub Pages | `./publish.sh` (stamps the version, tags `vX.(Y+1)`, pushes main + tag; Pages must be set to the `main` branch root once) |
+| Publish to GitHub Pages | `./publish.sh` (stamps the version, tags `vX.(Y+1)`, pushes main + tag + the `gh-pages` branch; Pages must be set to the `gh-pages` branch root once) |
 | Check a source by hand | see the recorded queries under *Data sources* above |
 
 `package.json` exists only to set `"type": "module"` and the test script. It
