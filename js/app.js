@@ -163,7 +163,7 @@ function locateMe() {
       btn.disabled = false;
       const { latitude: lat, longitude: lon } = pos.coords;
       initMap();
-      map.setView([lat, lon], 12);
+      map.setView([lat, lon], 14);
       resolvePoint(lat, lon);
     },
     (err) => {
