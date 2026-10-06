@@ -57,6 +57,7 @@ async function init() {
   $("search").addEventListener("submit", onSubmit);
   $("datum-toggle").addEventListener("click", toggleDatum);
   $("map-toggle").addEventListener("click", toggleMap);
+  $("sum-locate").addEventListener("click", showOnMap);
   $("heart").addEventListener("click", toggleFavourite);
   $("locate").addEventListener("click", locateMe);
   $("info-close").addEventListener("click", closeInfo);
@@ -121,6 +122,21 @@ function toggleMap() {
     // Leaflet measures its container on creation; re-measure once it is shown.
     requestAnimationFrame(() => map && map.invalidateSize());
   }
+}
+
+function showOnMap() {
+  if (!currentPoint) return;
+  const card = $("map-card");
+  if (card.classList.contains("hidden")) {
+    card.classList.remove("hidden");
+    $("map-toggle").setAttribute("aria-expanded", "true");
+  }
+  initMap();
+  const { latitude: lat, longitude: lon } = currentPoint;
+  map.setView([lat, lon], 14);
+  placeMarker(lat, lon);
+  requestAnimationFrame(() => map && map.invalidateSize());
+  card.scrollIntoView({ block: "nearest", behavior: "smooth" });
 }
 
 function initMap() {
@@ -910,9 +926,6 @@ function renderSummary() {
   $("summary").classList.remove("hidden");
 
   $("sum-name").textContent = placeLabel;
-  $("sum-coords").textContent = currentPoint
-    ? `${currentPoint.latitude.toFixed(4)}, ${currentPoint.longitude.toFixed(4)}`
-    : "";
 
   const phase = lunarPhase(now);
   $("sum-moon-glyph").innerHTML = moonGlyph(phase, 64);
