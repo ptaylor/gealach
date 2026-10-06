@@ -89,9 +89,9 @@
     .moon-name { font-size: 1.15rem; font-weight: 600; }
     .moon-btn { width: 100%; appearance: none; -webkit-appearance: none; background: none; border: 0; padding: 0; text-align: left; color: inherit; font: inherit; cursor: pointer; }
     .sum-moon-btn { display: flex; appearance: none; -webkit-appearance: none; background: none; border: 0; padding: 0; cursor: pointer; }
-    .sum-right { display: flex; align-items: center; gap: 0.7rem; flex: none; }
-    .sum-current { display: flex; flex-direction: column; align-items: center; gap: 0.1rem; appearance: none; -webkit-appearance: none; background: none; border: 0; padding: 0; cursor: pointer; color: inherit; font: inherit; }
-    .sum-current-speed { font-size: 0.7rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .sum-right { display: flex; align-items: center; gap: 0.8rem; flex: none; margin-right: 0.4rem; }
+    .sum-current { display: flex; align-items: center; gap: 0.25rem; appearance: none; -webkit-appearance: none; background: none; border: 0; padding: 0; cursor: pointer; color: inherit; font: inherit; }
+    .sum-current-speed { font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 
     .where-row { display: flex; align-items: flex-start; gap: 0.6rem; }
     .where-row #where-text { flex: 1; }
@@ -231,12 +231,12 @@
         </div>
         <div class="sum-right">
           <button id="sum-current" class="sum-current" type="button" title="Current details" aria-label="Current details" hidden>
-            <svg id="sum-current-rose" viewBox="0 0 34 34" width="28" height="28" aria-hidden="true"></svg>
+            <svg id="sum-current-rose" viewBox="0 0 34 34" width="40" height="40" aria-hidden="true"></svg>
             <span id="sum-current-speed" class="sum-current-speed"></span>
           </button>
           <div class="sum-moon">
             <button id="sum-moon" class="sum-moon-btn" type="button" title="Moon details" aria-label="Moon details">
-              <svg id="sum-moon-glyph" viewBox="0 0 64 64" width="30" height="30" aria-hidden="true"></svg>
+              <svg id="sum-moon-glyph" viewBox="0 0 64 64" width="40" height="40" aria-hidden="true"></svg>
             </button>
           </div>
         </div>
