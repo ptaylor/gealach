@@ -498,9 +498,7 @@ function drawCurve(series, now) {
   const x = (t) => padLeft + ((t - from) / (to - from)) * (W - padLeft - padRight);
   const y = (h) => padTop + (1 - (h - min) / (max - min)) * (H - padTop - padBottom);
 
-  const pts = win
-    .map((p) => `${x(Date.parse(p.time)).toFixed(1)},${y(p.height).toFixed(1)}`)
-    .join(" ");
+  const pts = win.map((p) => [x(Date.parse(p.time)), y(p.height)]);
   const nowX = x(nowMs).toFixed(1);
 
   const yLabels = [max, (max + min) / 2, min]
@@ -521,7 +519,7 @@ function drawCurve(series, now) {
 
   svg.innerHTML =
     yLabels +
-    `<polyline class="curve-line" points="${pts}" />` +
+    `<path class="curve-line" d="${smoothCurveD(pts)}" />` +
     `<line class="curve-now" x1="${nowX}" y1="${padTop}" x2="${nowX}" y2="${H - padBottom}" />` +
     xLabels;
 
@@ -919,6 +917,26 @@ function versionText() {
 // ---------------------------------------------------------------------------
 // summary panel
 
+// Catmull-Rom spline through the points as cubic Béziers, so the curve bends
+// smoothly instead of joining the samples with straight lines.
+function smoothCurveD(points) {
+  if (points.length < 2) return "";
+  const p = points;
+  let d = `M ${p[0][0].toFixed(1)} ${p[0][1].toFixed(1)}`;
+  for (let i = 0; i < p.length - 1; i += 1) {
+    const p0 = p[i - 1] || p[i];
+    const p1 = p[i];
+    const p2 = p[i + 1];
+    const p3 = p[i + 2] || p2;
+    const c1x = p1[0] + (p2[0] - p0[0]) / 6;
+    const c1y = p1[1] + (p2[1] - p0[1]) / 6;
+    const c2x = p2[0] - (p3[0] - p1[0]) / 6;
+    const c2y = p2[1] - (p3[1] - p1[1]) / 6;
+    d += ` C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
+  }
+  return d;
+}
+
 function renderSummary() {
   const r = tideResult;
   if (!r) return;
@@ -1003,14 +1021,12 @@ function drawSummaryCurve(series, now, turns) {
   const x = (t) => padLeft + ((t - from) / (to - from)) * (W - padLeft - padRight);
   const y = (h) => padTop + (1 - (h - min) / (max - min)) * (H - padTop - padBottom);
 
-  const pts = win
-    .map((p) => `${x(Date.parse(p.time)).toFixed(1)},${y(p.height).toFixed(1)}`)
-    .join(" ");
+  const pts = win.map((p) => [x(Date.parse(p.time)), y(p.height)]);
 
   let inner = "";
   inner +=
-    `<polygon class="curve-fill" points="${pts} ${x(to).toFixed(1)},${H - padBottom} ${x(from).toFixed(1)},${H - padBottom}" />`;
-  inner += `<polyline class="curve-line" points="${pts}" />`;
+    `<path class="curve-fill" d="${smoothCurveD(pts)} L ${x(to).toFixed(1)},${H - padBottom} L ${x(from).toFixed(1)},${H - padBottom} Z" />`;
+  inner += `<path class="curve-line" d="${smoothCurveD(pts)}" />`;
 
   const nowX = x(nowMs);
   inner += `<line class="curve-now" x1="${nowX.toFixed(1)}" y1="${padTop}" x2="${nowX.toFixed(1)}" y2="${H - padBottom}" />`;
