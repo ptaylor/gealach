@@ -628,14 +628,15 @@ function openMoon() {
   const ev = nextMoonEvents(now);
   $("moon-pop-glyph").innerHTML = moonGlyph(phase, 64);
   $("moon-pop-name").textContent = phase.name;
-  $("moon-pop-detail").textContent =
-    `${phase.waxing ? "Waxing" : "Waning"} · ` +
-    `${Math.round(phase.illuminated * 100)}% illuminated · ` +
+  $("moon-pop-detail").innerHTML =
+    `${Math.round(phase.illuminated * 100)}% illuminated<br>` +
     `${phase.ageDays.toFixed(1)} days old`;
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
   $("moon-pop-next").innerHTML =
-    `<div>Next full moon: <strong>${fmtDayTime(ev.nextFull.toISOString(), tz)}</strong> (${moonIn(ev.nextFull, now)})</div>` +
-    `<div>Next new moon: <strong>${fmtDayTime(ev.nextNew.toISOString(), tz)}</strong> (${moonIn(ev.nextNew, now)})</div>`;
+    `<div>Next full moon: <strong>${fmtDayTime(ev.nextFull.toISOString(), tz)}</strong></div>` +
+    `<div>${moonIn(ev.nextFull, now)}</div>` +
+    `<div>Next new moon: <strong>${fmtDayTime(ev.nextNew.toISOString(), tz)}</strong></div>` +
+    `<div>${moonIn(ev.nextNew, now)}</div>`;
   $("moon-overlay").classList.remove("hidden");
 }
 
