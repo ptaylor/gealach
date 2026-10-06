@@ -113,6 +113,18 @@ test("rangeAnalysis names the next spring after now", () => {
   );
 });
 
+test("rangeAnalysis names the next neap after now", () => {
+  const extremes = synthExtremes(30);
+  const base = Date.parse("2026-09-30T00:00:00Z");
+  const { nextNeap } = rangeAnalysis(extremes, "2026-09-30T12:00:00Z");
+  assert.ok(nextNeap, "expected a next neap");
+  const t = Date.parse(nextNeap);
+  assert.ok(
+    t > base + 9 * DAY && t < base + 13 * DAY,
+    `nextNeap ${nextNeap} out of the expected window`,
+  );
+});
+
 test("lunarPhase is new moon at the reference epoch", () => {
   const p = lunarPhase("2000-01-06T18:14:00Z");
   assert.equal(p.name, "New moon");

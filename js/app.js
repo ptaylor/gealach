@@ -72,6 +72,20 @@ async function init() {
   $("moon-overlay").addEventListener("click", (e) => {
     if (e.target === $("moon-overlay")) closeMoon();
   });
+  for (const id of ["sum-curve", "curve"]) {
+    const el = $(id);
+    el.addEventListener("click", openTideDetails);
+    el.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        openTideDetails();
+      }
+    });
+  }
+  $("tide-close").addEventListener("click", closeTide);
+  $("tide-overlay").addEventListener("click", (e) => {
+    if (e.target === $("tide-overlay")) closeTide();
+  });
   $("heart").addEventListener("click", toggleFavourite);
   $("locate").addEventListener("click", locateMe);
   $("info-close").addEventListener("click", closeInfo);
@@ -641,9 +655,9 @@ function openMoon() {
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
   $("moon-pop-next").innerHTML =
     `<div>Next full moon: <strong>${fmtDayTime(ev.nextFull.toISOString(), tz)}</strong></div>` +
-    `<div>${moonIn(ev.nextFull, now)}</div>` +
+    `<div>${daysUntil(ev.nextFull, now)}</div>` +
     `<div>Next new moon: <strong>${fmtDayTime(ev.nextNew.toISOString(), tz)}</strong></div>` +
-    `<div>${moonIn(ev.nextNew, now)}</div>`;
+    `<div>${daysUntil(ev.nextNew, now)}</div>`;
   $("moon-overlay").classList.remove("hidden");
 }
 
@@ -651,7 +665,7 @@ function closeMoon() {
   $("moon-overlay").classList.add("hidden");
 }
 
-function moonIn(d, now) {
+function daysUntil(d, now) {
   const days = (d.getTime() - now.getTime()) / 86400000;
   if (days < 1) return `in ${Math.max(0, Math.round(days * 24))} h`;
   return `in ${days.toFixed(1)} days`;
@@ -1089,6 +1103,71 @@ function drawSummaryCurve(series, now, turns) {
   inner += `<text class="curve-label" x="${W - padRight}" y="${H - 8}" text-anchor="end">${fmtClock(iso(new Date(to)), zone)}</text>`;
 
   svg.innerHTML = inner;
+}
+
+// ---------------------------------------------------------------------------
+// tide details popup
+
+function openTideDetails() {
+  const r = tideResult;
+  if (!r) return;
+  const now = new Date();
+
+  $("tide-pop-name").textContent = placeLabel;
+
+  const kindWord =
+    r.kind === "global-model" ? "global model" :
+    r.kind === "model" ? "model" : "prediction station";
+  $("tide-pop-source").textContent =
+    `${r.stationName} — ${kindWord}` +
+    (r.distanceKm != null ? ` · ${km(r.distanceKm)} from where you asked` : "");
+
+  const spring = rangeAnalysis(r.extremes, now);
+  const label =
+    spring.label === "springs" ? "springs" :
+    spring.label === "neaps" ? "neaps" :
+    spring.label === "mid" ? "mid-cycle" : "not available";
+  $("tide-pop-spring").innerHTML =
+    `Currently: <strong>${label}</strong> <span class="muted">(inferred from the predicted range)</span>`;
+
+  const lines = [];
+  if (spring.nextSpring) {
+    lines.push(
+      `<div>Next spring tide: <strong>${fmtDay(spring.nextSpring, zone)}</strong> (${daysUntil(new Date(spring.nextSpring), now)})</div>`,
+    );
+  }
+  if (spring.nextNeap) {
+    lines.push(
+      `<div>Next neap tide: <strong>${fmtDay(spring.nextNeap, zone)}</strong> (${daysUntil(new Date(spring.nextNeap), now)})</div>`,
+    );
+  }
+  $("tide-pop-next").innerHTML = lines.join("");
+
+  const series = activeSeries(r);
+  const st = tideStateAt(series, now);
+  if (st && Math.abs(st.rateMh) >= 0.05) {
+    const arrow = st.rising ? "↑" : "↓";
+    $("tide-pop-state").innerHTML =
+      `${arrow} ${st.rising ? "Rising" : "Falling"} at ${Math.abs(st.rateMh).toFixed(1)} m/h · now ${m(st.height)} m`;
+  } else {
+    $("tide-pop-state").textContent = "Steady now";
+  }
+
+  const turns = nextTurns(r.extremes, now);
+  let rangeLine = "";
+  if (turns.nextHigh && turns.nextLow) {
+    const hh = turns.nextHigh.heightODM ?? turns.nextHigh.height;
+    const hl = turns.nextLow.heightODM ?? turns.nextLow.height;
+    rangeLine = `Predicted range: ${m(Math.abs(hh - hl))} m`;
+  }
+  $("tide-pop-meta").textContent =
+    `${rangeLine}${rangeLine ? " · " : ""}Datum ${r.datum} · fetched ${fmtDayTime(r.fetchedAt, zone)}`;
+
+  $("tide-overlay").classList.remove("hidden");
+}
+
+function closeTide() {
+  $("tide-overlay").classList.add("hidden");
 }
 
 // ---------------------------------------------------------------------------

@@ -114,7 +114,7 @@ export function nextTurns(extremes, now = new Date()) {
  * spring is the date of the next local maximum of that range series.
  *
  * Returns { label: "springs"|"neaps"|"mid"|null, nextSpring: ISO|null,
- *           basis: "range-inference" }.
+ *           nextNeap: ISO|null, basis: "range-inference" }.
  */
 export function rangeAnalysis(extremes, now = new Date()) {
   const series = rangeSeries(extremes);
@@ -154,7 +154,20 @@ export function rangeAnalysis(extremes, now = new Date()) {
     }
   }
 
-  return { label, nextSpring, basis };
+  let nextNeap = null;
+  for (let i = 1; i < series.length - 1; i += 1) {
+    if (Date.parse(series[i].time) <= nowMs) continue;
+    // A local minimum: the mirror of the spring scan.
+    if (
+      series[i].range <= series[i - 1].range &&
+      series[i].range < series[i + 1].range
+    ) {
+      nextNeap = series[i].time;
+      break;
+    }
+  }
+
+  return { label, nextSpring, nextNeap, basis };
 }
 
 /**

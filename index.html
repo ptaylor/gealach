@@ -145,6 +145,7 @@
     .curve-now { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
     .curve-label { fill: var(--muted); font-size: 10px; }
     .curve-fill { fill: var(--accent); opacity: 0.08; }
+    svg#curve, svg#sum-curve { cursor: pointer; }
 
     .sum-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.8rem; margin-bottom: 0.2rem; }
     .sum-name { font-size: 1.2rem; font-weight: 700; cursor: pointer; }
@@ -177,6 +178,13 @@
     .moon-pop-detail { color: var(--muted); margin-bottom: 0.6rem; }
     .moon-next { margin-bottom: 1rem; font-size: 0.92rem; }
     .moon-next div { margin: 0.15rem 0; }
+    .tide-pop-source { margin-bottom: 0.6rem; font-size: 0.92rem; }
+    .tide-pop-spring { margin-bottom: 0.3rem; }
+    .tide-pop-next { margin-bottom: 0.5rem; font-size: 0.92rem; }
+    .tide-pop-next div { margin: 0.1rem 0; }
+    .tide-pop-state { font-size: 1.15rem; font-weight: 600; margin-bottom: 0.4rem; }
+    .tide-pop-meta { margin-bottom: 0.7rem; font-size: 0.85rem; }
+    .tide-pop-warning { font-size: 0.85rem; color: var(--muted); margin: 0 0 1rem; }
   </style>
 </head>
 <body>
@@ -218,7 +226,7 @@
           </button>
         </div>
       </div>
-      <svg id="sum-curve" viewBox="0 0 360 150" role="img" aria-label="Tide curve"></svg>
+      <svg id="sum-curve" viewBox="0 0 360 150" role="button" tabindex="0" aria-label="Tide details"></svg>
       <div class="sum-turns">
         <div class="sum-turn" id="sum-high"></div>
         <div class="sum-turn" id="sum-low"></div>
@@ -275,7 +283,7 @@
 
       <div class="card">
         <h2>Next few hours</h2>
-        <svg id="curve" viewBox="0 0 360 130" role="img" aria-label="Tide curve"></svg>
+        <svg id="curve" viewBox="0 0 360 130" role="button" tabindex="0" aria-label="Tide details"></svg>
         <p id="curve-note" class="muted" style="margin-bottom:0"></p>
       </div>
 
@@ -297,6 +305,19 @@
       <p class="notice">Not for navigation. Predictions exclude storm surge. Modelled currents are model output, not observations.</p>
     </footer>
   </main>
+
+  <div id="tide-overlay" class="overlay hidden">
+    <div class="overlay-panel">
+      <h2 id="tide-pop-name"></h2>
+      <div id="tide-pop-source" class="muted tide-pop-source"></div>
+      <div id="tide-pop-spring" class="tide-pop-spring"></div>
+      <div id="tide-pop-next" class="tide-pop-next"></div>
+      <div id="tide-pop-state" class="tide-pop-state"></div>
+      <div id="tide-pop-meta" class="muted tide-pop-meta"></div>
+      <p class="tide-pop-warning">Not for navigation. Predictions exclude storm surge. Modelled currents are model output, not observations.</p>
+      <button class="info-close" type="button" id="tide-close">Close</button>
+    </div>
+  </div>
 
   <div id="moon-overlay" class="overlay hidden">
     <div class="overlay-panel">
