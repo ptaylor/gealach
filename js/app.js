@@ -91,7 +91,7 @@ async function init() {
   $("current-overlay").addEventListener("click", (e) => {
     if (e.target === $("current-overlay")) closeCurrent();
   });
-  $("heart").addEventListener("click", toggleFavourite);
+  $("sum-heart").addEventListener("click", toggleFavourite);
   $("locate").addEventListener("click", locateMe);
   $("info-close").addEventListener("click", closeInfo);
   $("info-overlay").addEventListener("click", (e) => {
@@ -823,7 +823,7 @@ function isFavourited(point) {
 }
 
 function renderHeart() {
-  const btn = $("heart");
+  const btn = $("sum-heart");
   if (!currentPoint) {
     btn.hidden = true;
     return;

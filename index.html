@@ -98,6 +98,7 @@
     .where-row #where-text { flex: 1; }
     .heart { flex: none; background: var(--card); border: 1px solid var(--border); border-radius: 999px; font-size: 1.15rem; line-height: 1; color: var(--moon-lit); padding: 0.45rem 0.75rem; cursor: pointer; white-space: nowrap; }
     .heart.saved { color: var(--moon-lit); border-color: var(--moon-lit); }
+    .sum-heart { width: 40px; height: 40px; padding: 0; font-size: 1.3rem; display: flex; align-items: center; justify-content: center; border-radius: 999px; }
 
     .faves { list-style: none; margin: 0; padding: 0; }
     .faves li { display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0; border-bottom: 1px solid var(--grid); }
@@ -242,6 +243,7 @@
               <svg id="sum-moon-glyph" viewBox="0 0 64 64" width="40" height="40" aria-hidden="true"></svg>
             </button>
           </div>
+          <button id="sum-heart" class="heart sum-heart" type="button" aria-label="Save to favourites" hidden>♡</button>
         </div>
       </div>
       <svg id="sum-curve" viewBox="0 0 360 150" role="button" tabindex="0" aria-label="Tide details"></svg>
@@ -275,7 +277,6 @@
       <div id="where" class="card">
         <div class="where-row">
           <div id="where-text" style="font-size:1.05rem"></div>
-          <button id="heart" class="heart" type="button" aria-label="Save to favourites" hidden>♡</button>
         </div>
       </div>
       <div id="warning" class="warning hidden"></div>
