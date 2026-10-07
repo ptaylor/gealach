@@ -15,12 +15,12 @@ the provisional working name was `taoidí` (*tides*) until 2026-10-05.
 
 The first implementation now exists in the repository: the app shell, the
 three ES modules, the PWA shell, the tests and the docs. The vendored station
-snapshot (`data/stations.json`) and the hand-checked key mapping
-(`data/station-map.json`) are **not yet generated** — `erddap.marine.ie` was
-returning HTTP 504 on **2026-10-04** when the snapshot was due, so those two
-files are regenerated with `tools/refresh-stations.sh` once the server
-recovers. Until they exist the app answers every point with the Open-Meteo
-global model (requirement 10) and says so.
+snapshot (`data/stations.json`) is **generated** — `tools/refresh-stations.sh`
+regenerated all 38 stations on **2026-10-07** once `erddap.marine.ie` recovered
+from the HTTP 504 it was returning on **2026-10-04**. The hand-checked key
+mapping (`data/station-map.json`) is **still not generated**, so the surge
+feature stays silent until it exists; everything else answers Irish points
+from the Marine Institute prediction datasets.
 
 The research below was executed against the live services on **2026-09-30**
 (ERDDAP) and **2026-10-04** (Open-Meteo, NOAA); the observed output is
@@ -105,6 +105,18 @@ https://erddap.marine.ie/erddap/tabledap/imiSurgeObservationINTGN.json?stationID
 
 Traps, each one observed rather than guessed:
 
+- **A raw `>` or `<` in the request target is rejected by Tomcat.** The server
+  behind ERDDAP returns HTTP 400 "Invalid character found in the request
+  target" for `time>=…` sent literally. `curl` does **not** encode them, so
+  scripts and hand-checks must write `time%3E=` / `time%3C=`; the browser's
+  `fetch` encodes them automatically, which is why the app works and the shell
+  script did not.
+- **The URL builder must not add a second `=`.** ERDDAP constraints are
+  `key>=value` — the `=` is part of the `>=`/`<=` operator — so a builder that
+  writes `${key}=${value}` for a key like `"time>="` emits `time>==value` and
+  gets a 400. Keys that already end in `=` (the time comparisons) must be
+  joined to their value without another `=`; keys like `stationID` carry their
+  own `=`.
 - **`Water_Level` and `Water_Level_ODM` are different datums**, not a rounding
   difference: for Galway at 06:00Z they were 4.85 m and 1.91 m. Chart datum
   (LAT) is the one a chart and a tide table use; OD Malin is the land datum.

@@ -28,7 +28,9 @@ TOMORROW="$(date -u -v+1d +%Y-%m-%d 2>/dev/null || date -u -d tomorrow +%Y-%m-%d
 
 # One day of high/low rows across all stations (4 rows/station/day), then
 # collapse to the distinct station list. This avoids ERDDAP's slow distinct().
-URL="${ERDDAP}/tabledap/IMI_TidePrediction_HighLow.json?stationID,longitude,latitude&time>=${TODAY}T00:00:00Z&time<=${TOMORROW}T00:00:00Z"
+# Tomcat rejects a raw `>` or `<` in the request target, so the comparison
+# operators are percent-encoded (%3E, %3C) here — curl does not encode them.
+URL="${ERDDAP}/tabledap/IMI_TidePrediction_HighLow.json?stationID,longitude,latitude&time%3E=${TODAY}T00:00:00Z&time%3C=${TOMORROW}T00:00:00Z"
 
 TMP="$(mktemp)"
 trap 'rm -f "$TMP"' EXIT
