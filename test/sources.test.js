@@ -11,6 +11,7 @@ import {
   noaaPredictions,
   timezoneAt,
   reverseGeocode,
+  photonSearch,
 } from "../js/sources.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -173,4 +174,16 @@ test("reverseGeocode returns nulls when no feature matches", async () => {
   const out = await reverseGeocode({ latitude: 0, longitude: 0 });
   assert.equal(out.name, null);
   assert.equal(out.country, null);
+});
+
+test("photonSearch maps OSM features to the geocode shape", async () => {
+  route([["photon.komoot.io/api", await fixture("photon-cahore.json")]]);
+  const out = await photonSearch("Cahore");
+  assert.equal(out.source, "photon");
+  const ie = out.results.find((r) => r.countryCode === "IE");
+  assert.ok(ie, "Irish Cahore found where GeoNames has none");
+  assert.equal(ie.name, "Cahore");
+  assert.ok(Math.abs(ie.latitude - 52.566184) < 1e-5, "Cahore Point latitude");
+  assert.ok(Math.abs(ie.longitude + 6.2029364) < 1e-5, "Cahore Point longitude");
+  assert.equal(ie.timezone, null, "Photon carries no timezone");
 });

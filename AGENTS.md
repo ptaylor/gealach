@@ -194,11 +194,18 @@ Verified live on 2026-10-05:
   Data is © OpenStreetMap contributors, ODbL; attribution is in the map and the
   footer. Tiles are ordinary network images, so the map itself does not work
   offline — the rest of the shell does.
-- **Reverse geocoding**: Photon (`https://photon.komoot.io/reverse?lat=…&lon=…`)
-  — an OpenStreetMap-based geocoder, no key, `access-control-allow-origin: *`
-  (Nominatim itself does **not** send CORS headers, so the browser cannot call
-  it; Photon can). Returns `features[0].properties` (`name`, `country`,
-  `countrycode`, `state`). Used only to name a point picked on the map.
+- **Geocoding (reverse and forward)**: Photon — an OpenStreetMap-based geocoder,
+  no key, `access-control-allow-origin: *` (Nominatim itself does **not** send
+  CORS headers, so the browser cannot call it; Photon can).
+  - Reverse: `https://photon.komoot.io/reverse?lat=…&lon=…` returns
+    `features[0].properties` (`name`, `country`, `countrycode`, `state`) — used
+    to name a point picked on the map.
+  - Forward: `https://photon.komoot.io/api/?q=…&limit=…&lang=…` returns the
+    same features — used as a fallback when the GeoNames geocoder has no Irish
+    match, because GeoNames misses many Irish townlands. "Cahore" alone
+    geocodes to a town in Ontario, where OSM has Cahore Point in Wexford
+    (verified 2026-10-07). Photon returns no timezone, so the app resolves it
+    through Open-Meteo's `timezone=auto` endpoint.
 - **Timezone for a picked point**: the map pick has no name, so no geocoder
   timezone. Open-Meteo's forecast endpoint with `timezone=auto`
   (`https://api.open-meteo.com/v1/forecast?latitude=…&longitude=…&current_weather=true&timezone=auto`)
@@ -488,6 +495,10 @@ Update this section in the same commit that adds or upgrades a dependency.
   - Send `count` and `language`, prefer results with `country_code = "IE"` when
     fishing near Ireland, but **show the alternatives** rather than silently
     picking one — "Galway" also matches a town in Tennessee (verified).
+  - GeoNames misses many Irish townlands, so when no result has
+    `country_code = "IE"`, fall back to Photon forward geocoding (OSM) and
+    merge the alternatives; resolve Photon's missing timezone with
+    `timezone=auto` at choose time.
   - Take `timezone` from this response; do not infer it from longitude.
   - Attribute GeoNames/Open-Meteo (CC-BY 4.0).
 - **Docs**: <https://open-meteo.com/en/docs/geocoding-api>

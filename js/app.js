@@ -21,6 +21,7 @@ import {
   openMeteoMarine,
   timezoneAt,
   reverseGeocode,
+  photonSearch,
 } from "./sources.js";
 
 // Beyond this distance the Irish prediction stations stop being "local" at all
@@ -279,15 +280,37 @@ async function onSubmit(e) {
     return;
   }
   // Prefer Ireland, but show the alternatives rather than silently choosing.
-  geoResults = geo.results;
-  const def = geo.results.find((r) => r.countryCode === "IE") || geo.results[0];
-  showChoices(geoResults, def);
+  // GeoNames misses many Irish townlands (e.g. "Cahore" only resolves to
+  // Ontario), so when there is no Irish match, merge in Photon (OSM) results.
+  let results = geo.results;
+  if (!results.some((r) => r.countryCode === "IE")) {
+    try {
+      const photon = await photonSearch(q, { signal: controller.signal });
+      results = mergeGeoResults(results, photon.results);
+    } catch (err) {
+      if (err.name === "AbortError") return;
+      /* keep the Open-Meteo results on a Photon failure */
+    }
+  }
+  geoResults = results;
+  const def = results.find((r) => r.countryCode === "IE") || results[0];
+  showChoices(results, def);
   await choose(def);
 }
 
 async function choose(r, hide = false) {
   abort();
-  setZone(r.timezone || "UTC");
+  let tz = r.timezone || "UTC";
+  if (!r.timezone) {
+    // Photon results carry no timezone; resolve it from the point so the
+    // display stays in local time (requirement 11).
+    try {
+      tz = (await timezoneAt(r, { signal: controller.signal })).timezone;
+    } catch {
+      tz = "UTC";
+    }
+  }
+  setZone(tz);
   placeLabel = `${r.name}, ${r.admin1 ?? r.country}`;
   if (hide) hideChoices();
   else showChoices(geoResults, r);
@@ -407,6 +430,20 @@ function showChoices(results, picked) {
 function hideChoices() {
   $("choices").classList.add("hidden");
   $("choices").innerHTML = "";
+}
+
+// Merge two geocoder result lists, dropping duplicate (name, country) pairs
+// so the alternatives list does not repeat the same place twice.
+function mergeGeoResults(a, b) {
+  const seen = new Set();
+  const out = [];
+  for (const r of [...a, ...b]) {
+    const key = `${r.name}|${r.countryCode}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(r);
+  }
+  return out;
 }
 
 function setStatus(msg) {

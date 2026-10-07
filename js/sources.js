@@ -215,6 +215,42 @@ export async function reverseGeocode(point, { signal } = {}) {
   };
 }
 
+/**
+ * Forward geocode a place name through Photon (OpenStreetMap-based, CORS
+ * open). Used as a fallback when the Open-Meteo/GeoNames geocoder has no
+ * Irish match: GeoNames is missing many Irish townlands (e.g. "Cahore" only
+ * resolves to a town in Ontario, where OSM has Cahore Point in Wexford).
+ * Photon returns no timezone, so `timezone` is null and the caller fills it
+ * in with `timezoneAt`. Normalised to the same shape as `geocode`.
+ */
+export async function photonSearch(query, { language = "en", limit = 8, signal } = {}) {
+  const params = new URLSearchParams({
+    q: query,
+    limit: String(limit),
+    lang: language,
+  });
+  const { data, fetchedAt } = await fetchJson(`${PHOTON}/api/?${params.toString()}`, signal);
+  return {
+    source: "photon",
+    query,
+    results: (data.features || []).map((f) => {
+      const p = f.properties || {};
+      const [lon, lat] = f.geometry?.coordinates ?? [null, null];
+      return {
+        name: p.name ?? null,
+        country: p.country ?? null,
+        countryCode: p.countrycode ?? null,
+        admin1: p.state ?? p.county ?? null,
+        latitude: lat,
+        longitude: lon,
+        timezone: null,
+        population: null,
+      };
+    }),
+    fetchedAt,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Marine Institute ERDDAP (Ireland): tides, curve, surge
 
