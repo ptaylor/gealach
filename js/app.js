@@ -352,9 +352,6 @@ function render() {
   const now = new Date();
   $("result").classList.remove("hidden");
 
-  // Currents
-  renderCurrents(r.currents, now);
-
   // Surge
   renderSurge();
 
@@ -371,21 +368,6 @@ function activeSeries(r) {
   return datumChoice === "ODM" && r.seriesODM && r.seriesODM.length
     ? r.seriesODM
     : r.series;
-}
-
-function renderCurrents(currents, now) {
-  const card = $("currents-card");
-  const box = $("currents");
-  const c = nearestCurrent(currents, now);
-  if (!c || c.speed == null) {
-    card.classList.add("hidden");
-    return;
-  }
-  card.classList.remove("hidden");
-  box.innerHTML =
-    `<div class="current-big">${c.speed.toFixed(1)} m/s</div>` +
-    `<div>${compassPoint(c.direction)} (${Math.round(c.direction)}°, heading towards)</div>` +
-    `<div class="muted">Open-Meteo Marine, ~8 km grid, at ${fmtClock(c.time, zone)} — model output, not suitable for coastal navigation.</div>`;
 }
 
 function renderSurge() {
