@@ -46,6 +46,7 @@ let zone = "UTC";
 let zoneOffset = "+00:00";
 let zoneAbbr = "UTC";
 let datumChoice = "LAT";
+let sourceChoice = "auto";
 let map = null;
 let mapMarker = null;
 let favourites = [];
@@ -67,6 +68,9 @@ async function init() {
     }
   });
   $("details-toggle").addEventListener("click", toggleDetails);
+  for (const b of $("source-switch").querySelectorAll("button")) {
+    b.addEventListener("click", () => setSource(b.dataset.source));
+  }
   $("sum-heart").addEventListener("click", toggleFavourite);
   $("locate").addEventListener("click", locateMe);
   $("info-close").addEventListener("click", closeInfo);
@@ -294,7 +298,8 @@ async function load(point) {
   setStatus("Fetching tides…");
   try {
     const near = stations.length ? nearestStation(point, stations) : null;
-    const useMarine = near && near.distanceKm <= GLOBAL_MODEL_FALLBACK_KM;
+    const marineAvailable = !!near && near.distanceKm <= GLOBAL_MODEL_FALLBACK_KM;
+    const useMarine = marineAvailable && sourceChoice !== "open-meteo";
 
     if (useMarine) {
       const [marine, om] = await Promise.all([
@@ -1165,14 +1170,47 @@ function renderTideBlock() {
 
 function toggleDetails() {
   const details = $("details");
-  const opening = details.classList.contains("hidden");
-  if (opening) {
-    renderTideBlock();
-    renderMoonBlock();
-    renderCurrentBlock();
+  if (details.classList.contains("hidden")) {
+    openDetails();
+  } else {
+    details.classList.add("hidden");
+    $("details-toggle").setAttribute("aria-expanded", "false");
   }
-  details.classList.toggle("hidden", !opening);
-  $("details-toggle").setAttribute("aria-expanded", String(opening));
+}
+
+function openDetails() {
+  renderTideBlock();
+  renderMoonBlock();
+  renderCurrentBlock();
+  renderSourceSwitch();
+  $("details").classList.remove("hidden");
+  $("details-toggle").setAttribute("aria-expanded", "true");
+}
+
+function renderSourceSwitch() {
+  const near =
+    stations.length && currentPoint ? nearestStation(currentPoint, stations) : null;
+  const marineAvailable = !!near && near.distanceKm <= GLOBAL_MODEL_FALLBACK_KM;
+  const marineBtn = $("source-switch").querySelector('[data-source="marine-ie"]');
+  marineBtn.disabled = !marineAvailable;
+  marineBtn.title = marineAvailable
+    ? "Irish prediction stations (Marine Institute)"
+    : "No Irish station within range — not available";
+  const src = tideResult ? tideResult.source : null;
+  for (const b of $("source-switch").querySelectorAll("button")) {
+    const selected = b.dataset.source === src;
+    b.classList.toggle("selected", selected);
+    b.setAttribute("aria-pressed", String(selected));
+  }
+}
+
+async function setSource(source) {
+  if (source === sourceChoice) return;
+  sourceChoice = source;
+  if (!currentPoint) return;
+  abort();
+  await load(currentPoint);
+  openDetails();
 }
 
 /** A vertical arrow whose shaft length grows with the rate of rise or fall. */

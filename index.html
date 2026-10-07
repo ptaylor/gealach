@@ -180,6 +180,10 @@
     .details-toggle[aria-expanded="true"] .chevron { transform: rotate(180deg); }
     .details { border-top: 1px solid var(--border); margin-top: 0.6rem; }
     .details.hidden { display: none; }
+    .source-switch { display: flex; gap: 0.5rem; margin-bottom: 0.6rem; }
+    .source-switch button { flex: 1; padding: 0.45rem 0.5rem; font-size: 0.9rem; font-weight: 600; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--muted); cursor: pointer; }
+    .source-switch button.selected { color: var(--accent); border-color: var(--accent); }
+    .source-switch button:disabled { opacity: 0.45; cursor: default; }
     .details-block { padding-top: 0.6rem; margin-top: 0.6rem; border-top: 1px solid var(--border); font-size: 0.95rem; }
     .details-block.hidden { display: none; }
     .dt-state { display: flex; align-items: center; gap: 0.7rem; margin: 0.4rem 0; font-weight: 600; }
@@ -243,6 +247,10 @@
         <span class="chevron" aria-hidden="true">▾</span>
       </button>
       <div id="details" class="details hidden">
+        <div id="source-switch" class="source-switch" role="group" aria-label="Data source">
+          <button type="button" data-source="marine-ie">Marine Institute</button>
+          <button type="button" data-source="open-meteo">Open-Meteo</button>
+        </div>
         <div id="details-tide" class="details-block"></div>
         <div id="details-moon" class="details-block"></div>
         <div id="details-current" class="details-block"></div>
