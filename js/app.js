@@ -448,6 +448,7 @@ function renderMoonBlock() {
   const ev = nextMoonEvents(now);
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
   $("details-moon").innerHTML =
+    `<h2>Moon</h2>` +
     `<div class="dt-moon-row">` +
     `<svg viewBox="0 0 64 64" width="40" height="40" aria-hidden="true">${moonGlyph(phase, 64)}</svg>` +
     `<div><div class="dt-moon-name">${phase.name}</div>` +
@@ -967,6 +968,7 @@ function renderTideBlock() {
   }
 
   el.innerHTML =
+    `<h2>Tide</h2>` +
     `<div class="muted">${escapeHtml(r.stationName)} — ${kindWord}` +
     (r.distanceKm != null ? ` · ${km(r.distanceKm)} from where you asked` : "") +
     `</div>` +
@@ -1074,10 +1076,11 @@ function renderCurrentBlock() {
   const c = nearestCurrent(currents, now);
   const el = $("details-current");
   if (!c || c.speed == null || c.direction == null) {
-    el.innerHTML = `<div class="muted">No current model covers this point.</div>`;
+    el.innerHTML = `<h2>Current</h2><div class="muted">No current model covers this point.</div>`;
     return;
   }
   el.innerHTML =
+    `<h2>Current</h2>` +
     `<div class="dt-cur-row">` +
     `<svg viewBox="0 0 34 34" width="40" height="40" aria-hidden="true">${compassRoseSvg(c.direction)}</svg>` +
     `<div><div class="dt-cur-speed">${c.speed.toFixed(1)} m/s</div>` +
