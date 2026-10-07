@@ -66,31 +66,20 @@ async function init() {
       showOnMap();
     }
   });
-  $("sum-moon").addEventListener("click", openMoon);
-  $("moon-open").addEventListener("click", openMoon);
-  $("moon-close").addEventListener("click", closeMoon);
-  $("moon-overlay").addEventListener("click", (e) => {
-    if (e.target === $("moon-overlay")) closeMoon();
-  });
+  $("sum-moon").addEventListener("click", () => toggleDetails("moon"));
+  $("moon-open").addEventListener("click", () => toggleDetails("moon"));
   for (const id of ["sum-curve", "curve"]) {
     const el = $(id);
-    el.addEventListener("click", openTideDetails);
+    el.addEventListener("click", () => toggleDetails("tide"));
     el.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
-        openTideDetails();
+        toggleDetails("tide");
       }
     });
   }
-  $("tide-close").addEventListener("click", closeTide);
-  $("tide-overlay").addEventListener("click", (e) => {
-    if (e.target === $("tide-overlay")) closeTide();
-  });
-  $("sum-current").addEventListener("click", openCurrent);
-  $("current-close").addEventListener("click", closeCurrent);
-  $("current-overlay").addEventListener("click", (e) => {
-    if (e.target === $("current-overlay")) closeCurrent();
-  });
+  $("sum-current").addEventListener("click", () => toggleDetails("current"));
+  $("details-close").addEventListener("click", closeDetails);
   $("sum-heart").addEventListener("click", toggleFavourite);
   $("locate").addEventListener("click", locateMe);
   $("info-close").addEventListener("click", closeInfo);
@@ -313,6 +302,7 @@ async function choose(r) {
 
 async function load(point) {
   currentPoint = point;
+  $("details").classList.add("hidden");
   setStatus("Fetching tides…");
   try {
     const near = stations.length ? nearestStation(point, stations) : null;
@@ -648,26 +638,19 @@ function toggleDatum() {
 // ---------------------------------------------------------------------------
 // moon phase
 
-function openMoon() {
+function renderMoonBlock() {
   const now = new Date();
   const phase = lunarPhase(now);
   const ev = nextMoonEvents(now);
-  $("moon-pop-glyph").innerHTML = moonGlyph(phase, 64);
-  $("moon-pop-name").textContent = phase.name;
-  $("moon-pop-detail").innerHTML =
-    `${Math.round(phase.illuminated * 100)}% illuminated<br>` +
-    `${phase.ageDays.toFixed(1)} days old`;
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-  $("moon-pop-next").innerHTML =
-    `<div>Next full moon: <strong>${fmtDayTime(ev.nextFull.toISOString(), tz)}</strong></div>` +
-    `<div>${daysUntil(ev.nextFull, now)}</div>` +
-    `<div>Next new moon: <strong>${fmtDayTime(ev.nextNew.toISOString(), tz)}</strong></div>` +
-    `<div>${daysUntil(ev.nextNew, now)}</div>`;
-  $("moon-overlay").classList.remove("hidden");
-}
-
-function closeMoon() {
-  $("moon-overlay").classList.add("hidden");
+  $("details-moon").innerHTML =
+    `<div class="dt-moon-row">` +
+    `<svg viewBox="0 0 64 64" width="40" height="40" aria-hidden="true">${moonGlyph(phase, 64)}</svg>` +
+    `<div><div class="dt-moon-name">${phase.name}</div>` +
+    `<div class="muted">${Math.round(phase.illuminated * 100)}% illuminated · ${phase.ageDays.toFixed(1)} days old</div></div>` +
+    `</div>` +
+    `<div>Next full moon: <strong>${fmtDayTime(ev.nextFull.toISOString(), tz)}</strong> (${daysUntil(ev.nextFull, now)})</div>` +
+    `<div>Next new moon: <strong>${fmtDayTime(ev.nextNew.toISOString(), tz)}</strong> (${daysUntil(ev.nextNew, now)})</div>`;
 }
 
 function daysUntil(d, now) {
@@ -1114,31 +1097,24 @@ function drawSummaryCurve(series, now, turns) {
 // ---------------------------------------------------------------------------
 // tide details popup
 
-function openTideDetails() {
+function renderTideBlock() {
   const r = tideResult;
-  if (!r) return;
+  const el = $("details-tide");
+  if (!r) {
+    el.innerHTML = "";
+    return;
+  }
   const now = new Date();
-
-  $("tide-pop-name").textContent = placeLabel;
 
   const kindWord =
     r.kind === "global-model" ? "global model" :
     r.kind === "model" ? "model" : "prediction station";
-  $("tide-pop-source").textContent =
-    `${r.stationName} — ${kindWord}` +
-    (r.distanceKm != null ? ` · ${km(r.distanceKm)} from where you asked` : "");
 
-  const warnEl = $("tide-pop-warn");
+  let warn = "";
   if (r.kind === "global-model") {
-    warnEl.textContent =
-      "Outside the Irish prediction stations — showing the global model (Open-Meteo).";
-    warnEl.classList.remove("hidden");
+    warn = `<div class="dt-warn">Outside the Irish prediction stations — showing the global model (Open-Meteo).</div>`;
   } else if (r.distanceKm != null && r.distanceKm > MAX_STATION_DISTANCE_KM) {
-    warnEl.textContent =
-      `Nearest prediction station is ${km(r.distanceKm)} away — this is not a prediction for here.`;
-    warnEl.classList.remove("hidden");
-  } else {
-    warnEl.classList.add("hidden");
+    warn = `<div class="dt-warn">Nearest prediction station is ${km(r.distanceKm)} away — this is not a prediction for here.</div>`;
   }
 
   const spring = rangeAnalysis(r.extremes, now);
@@ -1146,31 +1122,29 @@ function openTideDetails() {
     spring.label === "springs" ? "springs" :
     spring.label === "neaps" ? "neaps" :
     spring.label === "mid" ? "mid-cycle" : "not available";
-  $("tide-pop-spring").innerHTML =
-    `Currently: <strong>${label}</strong> <span class="muted">(inferred from the predicted range)</span>`;
 
-  const lines = [];
+  const nextLines = [];
   if (spring.nextSpring) {
-    lines.push(
+    nextLines.push(
       `<div>Next spring tide: <strong>${fmtDay(spring.nextSpring, zone)}</strong> (${daysUntil(new Date(spring.nextSpring), now)})</div>`,
     );
   }
   if (spring.nextNeap) {
-    lines.push(
+    nextLines.push(
       `<div>Next neap tide: <strong>${fmtDay(spring.nextNeap, zone)}</strong> (${daysUntil(new Date(spring.nextNeap), now)})</div>`,
     );
   }
-  $("tide-pop-next").innerHTML = lines.join("");
 
   const series = activeSeries(r);
   const st = tideStateAt(series, now);
+  let arrow = "";
+  let stateText = "";
   if (st && Math.abs(st.rateMh) >= 0.05) {
-    $("tide-pop-arrow").innerHTML = tideArrowSvg(st.rateMh, st.rising);
-    $("tide-pop-state").textContent =
-      `${st.rising ? "Rising" : "Falling"} at ${Math.abs(st.rateMh).toFixed(1)} m/h · now ${m(st.height)} m`;
+    arrow = tideArrowSvg(st.rateMh, st.rising);
+    stateText = `${st.rising ? "Rising" : "Falling"} at ${Math.abs(st.rateMh).toFixed(1)} m/h · now ${m(st.height)} m`;
   } else {
-    $("tide-pop-arrow").innerHTML = steadyArrowSvg();
-    $("tide-pop-state").textContent = "Steady now";
+    arrow = steadyArrowSvg();
+    stateText = "Steady now";
   }
 
   const turns = nextTurns(r.extremes, now);
@@ -1180,26 +1154,50 @@ function openTideDetails() {
     const hl = turns.nextLow.heightODM ?? turns.nextLow.height;
     rangeLine = `Predicted range: ${m(Math.abs(hh - hl))} m`;
   }
-  $("tide-pop-meta").textContent =
-    `${rangeLine}${rangeLine ? " · " : ""}station ${escapeHtml(r.station)} · Datum ${r.datum} · fetched ${fmtDayTime(r.fetchedAt, zone)}`;
 
-  const surgeEl = $("tide-pop-surge");
+  let surge = "";
   if (surgeResult && surgeResult.series.length) {
     const latest = surgeResult.series[surgeResult.series.length - 1];
-    surgeEl.innerHTML =
-      `Observed at ${fmtDayTime(latest.time, zone)}:<br>` +
-      `tide <strong>${m(latest.tide)} m</strong> · surge <strong>${m(latest.surge)} m</strong>` +
-      `<div class="muted">The prediction above excludes this surge.</div>`;
-    surgeEl.classList.remove("hidden");
-  } else {
-    surgeEl.classList.add("hidden");
+    surge =
+      `<div class="muted">Observed at ${fmtDayTime(latest.time, zone)}: tide <strong>${m(latest.tide)} m</strong> · surge <strong>${m(latest.surge)} m</strong> — the prediction above excludes this surge.</div>`;
   }
 
-  $("tide-overlay").classList.remove("hidden");
+  el.innerHTML =
+    `<div class="muted">${escapeHtml(r.stationName)} — ${kindWord}` +
+    (r.distanceKm != null ? ` · ${km(r.distanceKm)} from where you asked` : "") +
+    `</div>` +
+    warn +
+    `<div>Currently: <strong>${label}</strong> <span class="muted">(inferred from the predicted range)</span></div>` +
+    nextLines.join("") +
+    `<div class="dt-state"><svg class="dt-arrow" viewBox="0 0 32 96" aria-hidden="true">${arrow}</svg><span>${stateText}</span></div>` +
+    `<div class="muted">${rangeLine}${rangeLine ? " · " : ""}station ${escapeHtml(r.station)} · Datum ${r.datum} · fetched ${fmtDayTime(r.fetchedAt, zone)}</div>` +
+    surge +
+    `<div class="muted">Not for navigation. Predictions exclude storm surge. Modelled currents are model output.</div>`;
 }
 
-function closeTide() {
-  $("tide-overlay").classList.add("hidden");
+function toggleDetails(which) {
+  const details = $("details");
+  const block = $(`details-${which}`);
+  const wasOpen =
+    !details.classList.contains("hidden") && !block.classList.contains("hidden");
+  if (wasOpen) {
+    details.classList.add("hidden");
+    return;
+  }
+  for (const b of ["tide", "moon", "current"]) {
+    $(`details-${b}`).classList.toggle("hidden", b !== which);
+  }
+  if (which === "tide") renderTideBlock();
+  else if (which === "moon") renderMoonBlock();
+  else renderCurrentBlock();
+  details.classList.remove("hidden");
+  requestAnimationFrame(() =>
+    details.scrollIntoView({ block: "nearest", behavior: "smooth" }),
+  );
+}
+
+function closeDetails() {
+  $("details").classList.add("hidden");
 }
 
 /** A vertical arrow whose shaft length grows with the rate of rise or fall. */
@@ -1246,24 +1244,22 @@ function renderCurrentRose(now) {
   $("sum-current-speed").textContent = `${c.speed.toFixed(1)} m/s`;
 }
 
-function openCurrent() {
+function renderCurrentBlock() {
   const now = new Date();
   const currents = currentResult && currentResult.currents;
   const c = nearestCurrent(currents, now);
-  if (!c || c.speed == null || c.direction == null) return;
-
-  $("cur-pop-name").textContent = placeLabel;
-  $("cur-pop-rose").innerHTML = compassRoseSvg(c.direction);
-  $("cur-pop-speed").textContent = `${c.speed.toFixed(1)} m/s`;
-  $("cur-pop-dir").textContent =
-    `${compassPoint(c.direction)} (${Math.round(c.direction)}°, heading towards)`;
-  $("cur-pop-source").textContent =
-    `Open-Meteo Marine, ~8 km grid, at ${fmtClock(c.time, zone)} — model output, not suitable for coastal navigation.`;
-  $("current-overlay").classList.remove("hidden");
-}
-
-function closeCurrent() {
-  $("current-overlay").classList.add("hidden");
+  const el = $("details-current");
+  if (!c || c.speed == null || c.direction == null) {
+    el.innerHTML = `<div class="muted">No current model covers this point.</div>`;
+    return;
+  }
+  el.innerHTML =
+    `<div class="dt-cur-row">` +
+    `<svg viewBox="0 0 34 34" width="40" height="40" aria-hidden="true">${compassRoseSvg(c.direction)}</svg>` +
+    `<div><div class="dt-cur-speed">${c.speed.toFixed(1)} m/s</div>` +
+    `<div class="muted">${compassPoint(c.direction)} (${Math.round(c.direction)}°, heading towards)</div></div>` +
+    `</div>` +
+    `<div class="muted">Open-Meteo Marine, ~8 km grid, at ${fmtClock(c.time, zone)} — model output, not suitable for coastal navigation.</div>`;
 }
 
 /** A compass rose with an arrow pointing the way the water is heading. */
