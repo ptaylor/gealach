@@ -6,13 +6,14 @@
   <meta name="theme-color" content="#0b6bcb" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)" />
   <meta name="description" content="What the sea is doing at a coastal place: tide height and state now, the next high and low, the range, and the modelled current." />
-  <meta name="version" content="v0.4" />
+  <meta name="version" content="v0.5" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
   <link rel="icon" href="icons/icon-192.png" type="image/png" sizes="192x192" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
   <title>Gealach — tides</title>
+  <script data-goatcounter="https://gealach.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
   <style>
     :root {
       --bg: #f5f6f8;
@@ -60,11 +61,11 @@
     }
     main { max-width: 34rem; margin: 0 auto; }
     header h1 { font-size: 2rem; margin: 0; line-height: 1; }
-    .brand { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.5rem; }
+    .brand { display: flex; align-items: center; justify-content: center; gap: 0.6rem; margin: 0.5rem 0 1rem; }
     .brand-icon { width: 42px; height: 42px; flex: none; transform: translateY(2px); }
     .t-geal { color: var(--brand-silver); }
     .t-ach { color: var(--brand-blue); }
-    .tagline { color: var(--muted); margin: 0.2rem 0 1rem; }
+    .brand-name { font-family: Georgia, 'Times New Roman', serif; font-style: italic; }
 
     form { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
     input[type="search"] {
@@ -87,16 +88,15 @@
 
     .moon-row { display: flex; align-items: center; gap: 0.9rem; }
     .moon-name { font-size: 1.15rem; font-weight: 600; }
-    .moon-btn { width: 100%; appearance: none; -webkit-appearance: none; background: none; border: 0; padding: 0; text-align: left; color: inherit; font: inherit; cursor: pointer; }
-    .sum-moon-btn { display: flex; appearance: none; -webkit-appearance: none; background: none; border: 0; padding: 0; cursor: pointer; }
-    .sum-right { display: flex; align-items: center; gap: 1.4rem; flex: none; margin-right: 0.4rem; }
-    .sum-current { display: flex; align-items: center; gap: 0.25rem; appearance: none; -webkit-appearance: none; background: none; border: 0; padding: 0; cursor: pointer; color: inherit; font: inherit; }
+    .sum-indicators { display: flex; align-items: center; justify-content: center; gap: 2.2rem; margin: 0.7rem 0 1rem; }
+    .sum-current { display: flex; align-items: center; gap: 0.25rem; }
     .sum-current-speed { font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 
     .where-row { display: flex; align-items: flex-start; gap: 0.6rem; }
     .where-row #where-text { flex: 1; }
     .heart { flex: none; background: var(--card); border: 1px solid var(--border); border-radius: 999px; font-size: 1.15rem; line-height: 1; color: var(--moon-lit); padding: 0.45rem 0.75rem; cursor: pointer; white-space: nowrap; }
     .heart.saved { color: var(--moon-lit); border-color: var(--moon-lit); }
+    .sum-heart { width: 40px; height: 40px; padding: 0; font-size: 1.3rem; display: flex; align-items: center; justify-content: center; border-radius: 999px; }
 
     .faves { list-style: none; margin: 0; padding: 0; }
     .faves li { display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0; border-bottom: 1px solid var(--grid); }
@@ -148,7 +148,6 @@
     .curve-now { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
     .curve-label { fill: var(--muted); font-size: 10px; }
     .curve-fill { fill: var(--accent); opacity: 0.08; }
-    svg#curve, svg#sum-curve { cursor: pointer; }
 
     .sum-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.8rem; margin-bottom: 0.2rem; }
     .sum-name { font-size: 1.2rem; font-weight: 700; cursor: pointer; }
@@ -166,6 +165,17 @@
     footer .notice { color: var(--muted); border-top: 1px solid var(--border); padding-top: 0.6rem; }
     .muted { color: var(--muted); }
     .hidden { display: none; }
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      padding: 0;
+      border: 0;
+      clip-path: inset(50%);
+      overflow: hidden;
+      white-space: nowrap;
+    }
 
     .brand { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; cursor: default; }
     .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; z-index: 2000; padding: 1.2rem; }
@@ -177,25 +187,25 @@
     .info-tagline { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.1rem; }
     .info-link { display: block; color: var(--accent); margin-bottom: 1rem; }
     .info-close { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 0.5rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer; }
-    .moon-pop-glyph { display: block; margin: 0 auto 0.6rem; }
-    .moon-pop-detail { color: var(--muted); margin-bottom: 0.6rem; }
-    .moon-next { margin-bottom: 1rem; font-size: 0.92rem; }
-    .moon-next div { margin: 0.15rem 0; }
-    .tide-pop-source { margin-bottom: 0.6rem; font-size: 0.92rem; }
-    .tide-pop-warn { color: var(--warn); font-size: 0.92rem; margin-bottom: 0.5rem; }
-    .tide-pop-spring { margin-bottom: 0.3rem; }
-    .tide-pop-next { margin-bottom: 0.5rem; font-size: 0.92rem; }
-    .tide-pop-next div { margin: 0.1rem 0; }
-    .tide-pop-state { font-size: 1.15rem; font-weight: 600; margin-bottom: 0.4rem; }
-    .tide-pop-arrow { display: block; margin: 0 auto 0.4rem; height: 96px; }
-    .tide-pop-meta { margin-bottom: 0.7rem; font-size: 0.85rem; }
-    .tide-pop-surge { font-size: 0.92rem; margin-bottom: 0.5rem; }
-    .tide-pop-warning { font-size: 0.85rem; color: var(--muted); margin: 0 0 1rem; }
-    .cur-pop-kind { margin-bottom: 0.6rem; }
-    .cur-pop-rose { display: block; margin: 0 auto 0.5rem; }
-    .cur-pop-speed { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-    .cur-pop-dir { margin-bottom: 0.4rem; }
-    .cur-pop-source { font-size: 0.85rem; margin: 0 0 1rem; }
+    .details-toggle { display: flex; align-items: center; justify-content: center; gap: 0.4rem; width: 100%; margin-top: 0.6rem; padding: 0.55rem; background: none; border: 1px solid var(--border); border-radius: 10px; color: var(--accent); font-size: 0.95rem; font-weight: 600; cursor: pointer; }
+    .details-toggle .chevron { transition: transform 0.2s; }
+    .details-toggle[aria-expanded="true"] .chevron { transform: rotate(180deg); }
+    .details { border-top: 1px solid var(--border); margin-top: 0.6rem; }
+    .details.hidden { display: none; }
+    .source-switch { display: flex; gap: 0.5rem; margin-bottom: 0.6rem; }
+    .source-switch button { flex: 1; padding: 0.45rem 0.5rem; font-size: 0.9rem; font-weight: 600; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--muted); cursor: pointer; }
+    .source-switch button.selected { color: var(--accent); border-color: var(--accent); }
+    .source-switch button:disabled { opacity: 0.45; cursor: default; }
+    .details-block { padding-top: 0.6rem; margin-top: 0.6rem; border-top: 1px solid var(--border); font-size: 0.95rem; }
+    #details h2 { font-size: 1rem; }
+    .details-block.hidden { display: none; }
+    .dt-state { display: flex; align-items: center; gap: 0.7rem; margin: 0.4rem 0; font-weight: 600; }
+    .dt-arrow { width: 15px; height: 45px; flex: none; }
+    .dt-warn { color: var(--warn); margin: 0.3rem 0; }
+    .dt-moon-row, .dt-cur-row { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.4rem; }
+    .dt-moon-name { font-weight: 600; }
+    .dt-cur-speed { font-size: 1.2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .datum-mini { background: none; border: 0; padding: 0; color: var(--accent); font: inherit; cursor: pointer; text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -203,14 +213,14 @@
     <header>
       <div class="brand" id="brand">
         <img src="icons/icon.svg" alt="" class="brand-icon" />
-        <h1><span class="t-geal">Geal</span><span class="t-ach">ach</span></h1>
+        <h1 class="brand-name"><span class="t-geal">geal</span><span class="t-ach">ach</span></h1>
       </div>
-      <p class="tagline">What the sea is doing at a coastal place.</p>
     </header>
 
     <form id="search" role="search">
-      <input id="q" type="search" inputmode="search" autocomplete="off"
+      <input id="q" type="search" inputmode="search" enterkeyhint="search" autocomplete="off"
              placeholder="Place name, or 53.27, -9.05" aria-label="Place name or coordinates" />
+      <button type="submit" class="visually-hidden">Search</button>
       <button type="button" id="map-toggle" class="secondary" aria-expanded="false">Map</button>
     </form>
 
@@ -231,84 +241,48 @@
             <span>Map</span>
           </button>
         </div>
-        <div class="sum-right">
-          <button id="sum-current" class="sum-current" type="button" title="Current details" aria-label="Current details" hidden>
-            <svg id="sum-current-rose" viewBox="0 0 34 34" width="40" height="40" aria-hidden="true"></svg>
-            <span id="sum-current-speed" class="sum-current-speed"></span>
-          </button>
-          <div class="sum-moon">
-            <button id="sum-moon" class="sum-moon-btn" type="button" title="Moon details" aria-label="Moon details">
-              <svg id="sum-moon-glyph" viewBox="0 0 64 64" width="40" height="40" aria-hidden="true"></svg>
-            </button>
-          </div>
+        <button id="sum-heart" class="heart sum-heart" type="button" aria-label="Save to favourites" hidden>♡</button>
+      </div>
+      <div class="sum-indicators">
+        <div id="sum-current" class="sum-current" hidden>
+          <svg id="sum-current-rose" viewBox="0 0 34 34" width="40" height="40" aria-hidden="true"></svg>
+          <span id="sum-current-speed" class="sum-current-speed"></span>
+        </div>
+        <div class="sum-moon">
+          <svg id="sum-moon-glyph" viewBox="0 0 64 64" width="40" height="40" aria-hidden="true"></svg>
         </div>
       </div>
-      <svg id="sum-curve" viewBox="0 0 360 150" role="button" tabindex="0" aria-label="Tide details"></svg>
+      <svg id="sum-curve" viewBox="0 0 360 150" role="img" aria-label="Tide curve"></svg>
       <div class="sum-turns">
         <div class="sum-turn" id="sum-high"></div>
         <div class="sum-turn" id="sum-low"></div>
       </div>
+      <button id="details-toggle" class="details-toggle" type="button" aria-expanded="false" aria-controls="details">
+        <span>Details</span>
+        <span class="chevron" aria-hidden="true">▾</span>
+      </button>
+      <div id="details" class="details hidden">
+        <div id="source-switch" class="source-switch" role="group" aria-label="Data source">
+          <button type="button" data-source="marine-ie">Marine Institute</button>
+          <button type="button" data-source="open-meteo">Open-Meteo</button>
+        </div>
+        <div id="details-tide" class="details-block"></div>
+        <div id="details-moon" class="details-block"></div>
+        <div id="details-current" class="details-block"></div>
+      </div>
     </section>
 
-    <div class="card">
-      <h2>Moon</h2>
-      <button class="moon-row moon-btn" id="moon-open" type="button" title="Moon details" aria-label="Moon details">
-        <svg id="moon-glyph" viewBox="0 0 64 64" width="52" height="52" aria-hidden="true"></svg>
-        <div>
-          <div id="moon-name" class="moon-name"></div>
-          <div id="moon-detail" class="muted"></div>
-        </div>
-      </button>
-    </div>
+    <div id="choices" class="choices hidden" aria-label="Matching places"></div>
 
     <div id="favourites-card" class="card">
       <h2>Favourites</h2>
       <ul id="favourites-list" class="faves"></ul>
     </div>
 
-    <div id="choices" class="choices hidden" aria-label="Matching places"></div>
     <div id="offline" class="warning hidden">Offline — showing the last fetched prediction.</div>
     <p id="status" class="status hidden" role="status"></p>
 
     <section id="result" class="hidden">
-      <div id="where" class="card">
-        <div class="where-row">
-          <div id="where-text" style="font-size:1.05rem"></div>
-          <button id="heart" class="heart" type="button" aria-label="Save to favourites" hidden>♡</button>
-        </div>
-      </div>
-      <div id="warning" class="warning hidden"></div>
-
-      <div class="card now">
-        <div class="datum-row">
-          <span id="datum-label" class="dat"></span>
-          <button id="datum-toggle" class="hidden" type="button"></button>
-        </div>
-        <div class="big"><span id="height-now">—</span><span class="unit"> m</span></div>
-        <div id="state-now" class="state"></div>
-      </div>
-
-      <div class="card">
-        <h2>Next turns</h2>
-        <div id="turns"></div>
-      </div>
-
-      <div class="card">
-        <h2>Springs / neaps</h2>
-        <div id="springs"></div>
-      </div>
-
-      <div class="card">
-        <h2>Next few hours</h2>
-        <svg id="curve" viewBox="0 0 360 130" role="button" tabindex="0" aria-label="Tide details"></svg>
-        <p id="curve-note" class="muted" style="margin-bottom:0"></p>
-      </div>
-
-      <div class="card hidden" id="currents-card">
-        <h2>Current — model output</h2>
-        <div id="currents"></div>
-      </div>
-
       <div class="card hidden" id="surge-card">
         <h2>Surge — observed, separate from the prediction</h2>
         <div id="surge"></div>
@@ -320,51 +294,14 @@
     <footer>
       <p id="attribution" class="muted"></p>
       <p class="notice">Not for navigation. Predictions exclude storm surge. Modelled currents are model output, not observations.</p>
+      <p class="notice">Usage is measured with GoatCounter — no cookies, no personal data.</p>
     </footer>
   </main>
-
-  <div id="tide-overlay" class="overlay hidden">
-    <div class="overlay-panel">
-      <h2 id="tide-pop-name"></h2>
-      <div id="tide-pop-source" class="muted tide-pop-source"></div>
-      <div id="tide-pop-warn" class="tide-pop-warn hidden"></div>
-      <div id="tide-pop-spring" class="tide-pop-spring"></div>
-      <div id="tide-pop-next" class="tide-pop-next"></div>
-      <svg id="tide-pop-arrow" class="tide-pop-arrow" viewBox="0 0 32 96" aria-hidden="true"></svg>
-      <div id="tide-pop-state" class="tide-pop-state"></div>
-      <div id="tide-pop-meta" class="muted tide-pop-meta"></div>
-      <div id="tide-pop-surge" class="tide-pop-surge hidden"></div>
-      <p class="tide-pop-warning">Not for navigation. Predictions exclude storm surge. Modelled currents are model output, not observations.</p>
-      <button class="info-close" type="button" id="tide-close">Close</button>
-    </div>
-  </div>
-
-  <div id="moon-overlay" class="overlay hidden">
-    <div class="overlay-panel">
-      <svg id="moon-pop-glyph" class="moon-pop-glyph" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true"></svg>
-      <h2 id="moon-pop-name"></h2>
-      <div id="moon-pop-detail" class="moon-pop-detail"></div>
-      <div id="moon-pop-next" class="moon-next"></div>
-      <button class="info-close" type="button" id="moon-close">Close</button>
-    </div>
-  </div>
-
-  <div id="current-overlay" class="overlay hidden">
-    <div class="overlay-panel">
-      <h2 id="cur-pop-name"></h2>
-      <div id="cur-pop-kind" class="muted cur-pop-kind">Current — model output</div>
-      <svg id="cur-pop-rose" class="cur-pop-rose" viewBox="0 0 34 34" width="64" height="64" aria-hidden="true"></svg>
-      <div id="cur-pop-speed" class="cur-pop-speed"></div>
-      <div id="cur-pop-dir" class="muted cur-pop-dir"></div>
-      <p id="cur-pop-source" class="muted cur-pop-source"></p>
-      <button class="info-close" type="button" id="current-close">Close</button>
-    </div>
-  </div>
 
   <div id="info-overlay" class="overlay hidden">
     <div class="overlay-panel">
       <img src="icons/icon.svg" alt="" class="info-icon" />
-      <h2><span class="t-geal">Geal</span><span class="t-ach">ach</span></h2>
+      <h2 class="brand-name"><span class="t-geal">geal</span><span class="t-ach">ach</span></h2>
       <div class="info-version" id="info-version"></div>
       <div class="info-tagline">Tides for a coastal place.</div>
       <a class="info-link" href="https://github.com/ptaylor/gealach/issues/new?template=bug-report.md" target="_blank" rel="noopener">🐛 Report a bug</a>
