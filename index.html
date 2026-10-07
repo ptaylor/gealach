@@ -192,6 +192,7 @@
     .dt-moon-row, .dt-cur-row { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.4rem; }
     .dt-moon-name { font-weight: 600; }
     .dt-cur-speed { font-size: 1.2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .datum-mini { background: none; border: 0; padding: 0; color: var(--accent); font: inherit; cursor: pointer; text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -259,17 +260,6 @@
 
     <div id="choices" class="choices hidden" aria-label="Matching places"></div>
 
-    <div class="card">
-      <h2>Moon</h2>
-      <div class="moon-row">
-        <svg id="moon-glyph" viewBox="0 0 64 64" width="52" height="52" aria-hidden="true"></svg>
-        <div>
-          <div id="moon-name" class="moon-name"></div>
-          <div id="moon-detail" class="muted"></div>
-        </div>
-      </div>
-    </div>
-
     <div id="favourites-card" class="card">
       <h2>Favourites</h2>
       <ul id="favourites-list" class="faves"></ul>
@@ -279,38 +269,6 @@
     <p id="status" class="status hidden" role="status"></p>
 
     <section id="result" class="hidden">
-      <div id="where" class="card">
-        <div class="where-row">
-          <div id="where-text" style="font-size:1.05rem"></div>
-        </div>
-      </div>
-      <div id="warning" class="warning hidden"></div>
-
-      <div class="card now">
-        <div class="datum-row">
-          <span id="datum-label" class="dat"></span>
-          <button id="datum-toggle" class="hidden" type="button"></button>
-        </div>
-        <div class="big"><span id="height-now">—</span><span class="unit"> m</span></div>
-        <div id="state-now" class="state"></div>
-      </div>
-
-      <div class="card">
-        <h2>Next turns</h2>
-        <div id="turns"></div>
-      </div>
-
-      <div class="card">
-        <h2>Springs / neaps</h2>
-        <div id="springs"></div>
-      </div>
-
-      <div class="card">
-        <h2>Next few hours</h2>
-        <svg id="curve" viewBox="0 0 360 130" role="img" aria-label="Tide curve"></svg>
-        <p id="curve-note" class="muted" style="margin-bottom:0"></p>
-      </div>
-
       <div class="card hidden" id="currents-card">
         <h2>Current — model output</h2>
         <div id="currents"></div>

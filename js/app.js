@@ -57,7 +57,6 @@ init();
 
 async function init() {
   $("search").addEventListener("submit", onSubmit);
-  $("datum-toggle").addEventListener("click", toggleDatum);
   $("map-toggle").addEventListener("click", toggleMap);
   $("sum-locate").addEventListener("click", showOnMap);
   $("sum-name").addEventListener("click", showOnMap);
@@ -71,6 +70,10 @@ async function init() {
   for (const b of $("source-switch").querySelectorAll("button")) {
     b.addEventListener("click", () => setSource(b.dataset.source));
   }
+  $("details").addEventListener("click", (e) => {
+    const btn = e.target.closest('[data-action="toggle-datum"]');
+    if (btn) toggleDatum();
+  });
   $("sum-heart").addEventListener("click", toggleFavourite);
   $("locate").addEventListener("click", locateMe);
   $("info-close").addEventListener("click", closeInfo);
@@ -117,7 +120,6 @@ async function init() {
   window.addEventListener("online", () => setOffline(false));
   setOffline(!navigator.onLine);
 
-  renderMoon();
   loadFavourites();
   renderFavourites();
 }
@@ -350,70 +352,6 @@ function render() {
   const now = new Date();
   $("result").classList.remove("hidden");
 
-  // Where
-  const kindWord =
-    r.kind === "global-model" ? "global model" :
-    r.kind === "model" ? "model" : "prediction station";
-  $("where-text").innerHTML =
-    `<strong>${escapeHtml(placeLabel)}</strong><br>` +
-    `<span class="muted">${kindWord} <strong>${escapeHtml(r.stationName)}</strong>` +
-    `${r.distanceKm != null ? ` — ${km(r.distanceKm)} from where you asked` : ""}</span>`;
-
-  // Warning
-  const warn = $("warning");
-  if (r.kind === "global-model") {
-    warn.textContent =
-      "Outside the Irish prediction stations — showing the global model (Open-Meteo).";
-    warn.classList.remove("hidden");
-  } else if (r.distanceKm != null && r.distanceKm > MAX_STATION_DISTANCE_KM) {
-    warn.textContent =
-      `Nearest prediction station is ${km(r.distanceKm)} away — this is not a prediction for here.`;
-    warn.classList.remove("hidden");
-  } else {
-    warn.classList.add("hidden");
-  }
-
-  // Datum label + toggle
-  const hasODM = Array.isArray(r.seriesODM) && r.seriesODM.length > 0;
-  const dt = $("datum-label");
-  const dtBtn = $("datum-toggle");
-  if (hasODM) {
-    dt.textContent = datumChoice === "LAT" ? "Heights: chart datum (LAT)" : "Heights: OD Malin";
-    dtBtn.textContent = datumChoice === "LAT" ? "Show OD Malin" : "Show LAT";
-    dtBtn.classList.remove("hidden");
-  } else {
-    dt.textContent =
-      r.datum === "MSL" ? "Heights: mean sea level (not chart datum)" : `Heights: ${r.datum}`;
-    dtBtn.classList.add("hidden");
-  }
-
-  // Now
-  const series = activeSeries(r);
-  const st = tideStateAt(series, now);
-  if (st) {
-    $("height-now").textContent = m(st.height);
-    if (Math.abs(st.rateMh) < 0.05) {
-      $("state-now").textContent = "Steady";
-    } else {
-      const cls = st.rising ? "rising" : "falling";
-      const word = st.rising ? "Rising" : "Falling";
-      $("state-now").innerHTML =
-        `<span class="${cls}">${word}</span> at ${Math.abs(st.rateMh).toFixed(1)} m/h`;
-    }
-  } else {
-    $("height-now").textContent = "—";
-    $("state-now").textContent = "Not available for this moment";
-  }
-
-  // Turns
-  renderTurns(nextTurns(r.extremes, now), hasODM);
-
-  // Springs / neaps
-  renderSprings(rangeAnalysis(r.extremes, now));
-
-  // Curve
-  drawCurve(series, now);
-
   // Currents
   renderCurrents(r.currents, now);
 
@@ -433,118 +371,6 @@ function activeSeries(r) {
   return datumChoice === "ODM" && r.seriesODM && r.seriesODM.length
     ? r.seriesODM
     : r.series;
-}
-
-function renderTurns(turns, hasODM) {
-  const rows = [];
-  const pairs = [
-    ["High", turns.nextHigh],
-    ["Low", turns.nextLow],
-  ];
-  for (const [label, t] of pairs) {
-    if (!t) {
-      rows.push(
-        `<div class="turn-row"><span class="kind">Next ${label}</span><span class="time">—</span></div>`,
-      );
-      continue;
-    }
-    const useODM = datumChoice === "ODM" && hasODM && t.heightODM != null;
-    const h = useODM ? t.heightODM : t.height;
-    const when = t.minutesTo >= 0 ? `in ${fmtDur(t.minutesTo)}` : "now";
-    rows.push(
-      `<div class="turn-row"><span class="kind">${label}</span>` +
-      `<span class="time">${fmtClock(t.time, zone)} (${when})</span>` +
-      `<span class="height">${m(h)} m</span></div>`,
-    );
-  }
-  $("turns").innerHTML = rows.join("");
-}
-
-function renderSprings(spring) {
-  const parts = [];
-  parts.push(`Currently: <strong>${spring.label ?? "not available"}</strong>`);
-  if (spring.nextSpring) {
-    parts.push(`Next spring tide around <strong>${fmtDay(spring.nextSpring, zone)}</strong>`);
-  }
-  parts.push(`<span class="muted">(inferred from the predicted range)</span>`);
-  $("springs").innerHTML = parts.join("<br>");
-}
-
-function drawCurve(series, now) {
-  const svg = $("curve");
-  const W = 360;
-  const H = 130;
-  const padTop = 12;
-  const padBottom = 24;
-  const padLeft = 40;
-  const padRight = 8;
-  const nowMs = now.getTime();
-  const from = nowMs - 2 * 3600000;
-  const to = nowMs + 12 * 3600000;
-
-  const win = series.filter((p) => {
-    const t = Date.parse(p.time);
-    return t >= from && t <= to;
-  });
-
-  if (win.length < 2) {
-    svg.innerHTML =
-      `<text class="curve-label" x="180" y="65" text-anchor="middle">No curve for this window</text>`;
-    $("curve-note").textContent = "";
-    return;
-  }
-
-  let min = Infinity;
-  let max = -Infinity;
-  for (const p of win) {
-    if (p.height != null) {
-      if (p.height < min) min = p.height;
-      if (p.height > max) max = p.height;
-    }
-  }
-  if (!Number.isFinite(min)) {
-    svg.innerHTML = "";
-    $("curve-note").textContent = "";
-    return;
-  }
-  const pad = (max - min) * 0.15 || 0.5;
-  min -= pad;
-  max += pad;
-
-  const x = (t) => padLeft + ((t - from) / (to - from)) * (W - padLeft - padRight);
-  const y = (h) => padTop + (1 - (h - min) / (max - min)) * (H - padTop - padBottom);
-
-  const pts = win.map((p) => [x(Date.parse(p.time)), y(p.height)]);
-  const nowX = x(nowMs).toFixed(1);
-
-  const yLabels = [max, (max + min) / 2, min]
-    .map((h) =>
-      `<text class="curve-label" x="${padLeft - 5}" y="${y(h) + 3}" text-anchor="end">${m(h)}</text>`,
-    )
-    .join("");
-  const xLabels = [
-    [from, fmtClock(iso(new Date(from)), zone), "start"],
-    [nowMs, "now", "middle"],
-    [to, fmtClock(iso(new Date(to)), zone), "end"],
-  ]
-    .map(
-      ([t, label, anchor]) =>
-        `<text class="curve-label" x="${x(t).toFixed(1)}" y="${H - 6}" text-anchor="${anchor}">${label}</text>`,
-    )
-    .join("");
-
-  svg.innerHTML =
-    yLabels +
-    `<path class="curve-line" d="${smoothCurveD(pts)}" />` +
-    `<line class="curve-now" x1="${nowX}" y1="${padTop}" x2="${nowX}" y2="${H - padBottom}" />` +
-    xLabels;
-
-  const datumName =
-    datumChoice === "ODM" && tideResult.seriesODM && tideResult.seriesODM.length
-      ? "OD Malin"
-      : tideResult.datum;
-  $("curve-note").textContent =
-    `Heights in ${datumName}; ${fmtClock(iso(new Date(from)), zone)} to ${fmtClock(iso(new Date(to)), zone)}.`;
 }
 
 function renderCurrents(currents, now) {
@@ -625,7 +451,10 @@ function setZone(z) {
 
 function toggleDatum() {
   datumChoice = datumChoice === "LAT" ? "ODM" : "LAT";
-  if (tideResult) render();
+  if (tideResult) {
+    render();
+    renderTideBlock();
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -650,16 +479,6 @@ function daysUntil(d, now) {
   const days = (d.getTime() - now.getTime()) / 86400000;
   if (days < 1) return `in ${Math.max(0, Math.round(days * 24))} h`;
   return `in ${days.toFixed(1)} days`;
-}
-
-function renderMoon() {
-  const phase = lunarPhase(new Date());
-  $("moon-glyph").innerHTML = moonGlyph(phase);
-  $("moon-name").textContent = phase.name;
-  $("moon-detail").textContent =
-    `${phase.waxing ? "Waxing" : "Waning"} · ` +
-    `${Math.round(phase.illuminated * 100)}% illuminated · ` +
-    `${phase.ageDays.toFixed(1)} days old`;
 }
 
 /** SVG for the Moon's disc with the lit portion filled. */
@@ -1155,6 +974,16 @@ function renderTideBlock() {
       `<div class="muted">Observed at ${fmtDayTime(latest.time, zone)}: tide <strong>${m(latest.tide)} m</strong> · surge <strong>${m(latest.surge)} m</strong> — the prediction above excludes this surge.</div>`;
   }
 
+  const hasODM = Array.isArray(r.seriesODM) && r.seriesODM.length > 0;
+  let datumHtml = `Datum ${escapeHtml(r.datum)}`;
+  if (hasODM) {
+    const shown = datumChoice === "LAT" ? "LAT (chart datum)" : "OD Malin";
+    const other = datumChoice === "LAT" ? "OD Malin" : "LAT";
+    datumHtml =
+      `Datum ${shown} · ` +
+      `<button class="datum-mini" type="button" data-action="toggle-datum">Show ${other}</button>`;
+  }
+
   el.innerHTML =
     `<div class="muted">${escapeHtml(r.stationName)} — ${kindWord}` +
     (r.distanceKm != null ? ` · ${km(r.distanceKm)} from where you asked` : "") +
@@ -1163,7 +992,7 @@ function renderTideBlock() {
     `<div>Currently: <strong>${label}</strong> <span class="muted">(inferred from the predicted range)</span></div>` +
     nextLines.join("") +
     `<div class="dt-state"><svg class="dt-arrow" viewBox="0 0 32 96" aria-hidden="true">${arrow}</svg><span>${stateText}</span></div>` +
-    `<div class="muted">${rangeLine}${rangeLine ? " · " : ""}station ${escapeHtml(r.station)} · Datum ${r.datum} · fetched ${fmtDayTime(r.fetchedAt, zone)}</div>` +
+    `<div class="muted">${rangeLine}${rangeLine ? " · " : ""}station ${escapeHtml(r.station)} · ${datumHtml} · fetched ${fmtDayTime(r.fetchedAt, zone)}</div>` +
     surge +
     `<div class="muted">Not for navigation. Predictions exclude storm surge. Modelled currents are model output.</div>`;
 }
