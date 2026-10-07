@@ -66,20 +66,7 @@ async function init() {
       showOnMap();
     }
   });
-  $("sum-moon").addEventListener("click", () => toggleDetails("moon"));
-  $("moon-open").addEventListener("click", () => toggleDetails("moon"));
-  for (const id of ["sum-curve", "curve"]) {
-    const el = $(id);
-    el.addEventListener("click", () => toggleDetails("tide"));
-    el.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        toggleDetails("tide");
-      }
-    });
-  }
-  $("sum-current").addEventListener("click", () => toggleDetails("current"));
-  $("details-close").addEventListener("click", closeDetails);
+  $("details-toggle").addEventListener("click", toggleDetails);
   $("sum-heart").addEventListener("click", toggleFavourite);
   $("locate").addEventListener("click", locateMe);
   $("info-close").addEventListener("click", closeInfo);
@@ -303,6 +290,7 @@ async function choose(r) {
 async function load(point) {
   currentPoint = point;
   $("details").classList.add("hidden");
+  $("details-toggle").setAttribute("aria-expanded", "false");
   setStatus("Fetching tides…");
   try {
     const near = stations.length ? nearestStation(point, stations) : null;
@@ -1175,29 +1163,16 @@ function renderTideBlock() {
     `<div class="muted">Not for navigation. Predictions exclude storm surge. Modelled currents are model output.</div>`;
 }
 
-function toggleDetails(which) {
+function toggleDetails() {
   const details = $("details");
-  const block = $(`details-${which}`);
-  const wasOpen =
-    !details.classList.contains("hidden") && !block.classList.contains("hidden");
-  if (wasOpen) {
-    details.classList.add("hidden");
-    return;
+  const opening = details.classList.contains("hidden");
+  if (opening) {
+    renderTideBlock();
+    renderMoonBlock();
+    renderCurrentBlock();
   }
-  for (const b of ["tide", "moon", "current"]) {
-    $(`details-${b}`).classList.toggle("hidden", b !== which);
-  }
-  if (which === "tide") renderTideBlock();
-  else if (which === "moon") renderMoonBlock();
-  else renderCurrentBlock();
-  details.classList.remove("hidden");
-  requestAnimationFrame(() =>
-    details.scrollIntoView({ block: "nearest", behavior: "smooth" }),
-  );
-}
-
-function closeDetails() {
-  $("details").classList.add("hidden");
+  details.classList.toggle("hidden", !opening);
+  $("details-toggle").setAttribute("aria-expanded", String(opening));
 }
 
 /** A vertical arrow whose shaft length grows with the rate of rise or fall. */

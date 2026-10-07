@@ -87,10 +87,8 @@
 
     .moon-row { display: flex; align-items: center; gap: 0.9rem; }
     .moon-name { font-size: 1.15rem; font-weight: 600; }
-    .moon-btn { width: 100%; appearance: none; -webkit-appearance: none; background: none; border: 0; padding: 0; text-align: left; color: inherit; font: inherit; cursor: pointer; }
-    .sum-moon-btn { display: flex; appearance: none; -webkit-appearance: none; background: none; border: 0; padding: 0; cursor: pointer; }
     .sum-right { display: flex; align-items: center; gap: 1.4rem; flex: none; margin-right: 0.4rem; }
-    .sum-current { display: flex; align-items: center; gap: 0.25rem; appearance: none; -webkit-appearance: none; background: none; border: 0; padding: 0; cursor: pointer; color: inherit; font: inherit; }
+    .sum-current { display: flex; align-items: center; gap: 0.25rem; }
     .sum-current-speed { font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 
     .where-row { display: flex; align-items: flex-start; gap: 0.6rem; }
@@ -149,7 +147,6 @@
     .curve-now { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
     .curve-label { fill: var(--muted); font-size: 10px; }
     .curve-fill { fill: var(--accent); opacity: 0.08; }
-    svg#curve, svg#sum-curve { cursor: pointer; }
 
     .sum-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.8rem; margin-bottom: 0.2rem; }
     .sum-name { font-size: 1.2rem; font-weight: 700; cursor: pointer; }
@@ -178,9 +175,11 @@
     .info-tagline { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.1rem; }
     .info-link { display: block; color: var(--accent); margin-bottom: 1rem; }
     .info-close { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 0.5rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer; }
-    .details-head { display: flex; justify-content: space-between; align-items: center; }
-    .details-head h2 { margin: 0; }
-    .details-close { background: none; border: 0; color: var(--muted); font-size: 1.15rem; line-height: 1; cursor: pointer; padding: 0.1rem 0.3rem; }
+    .details-toggle { display: flex; align-items: center; justify-content: center; gap: 0.4rem; width: 100%; margin-top: 0.6rem; padding: 0.55rem; background: none; border: 1px solid var(--border); border-radius: 10px; color: var(--accent); font-size: 0.95rem; font-weight: 600; cursor: pointer; }
+    .details-toggle .chevron { transition: transform 0.2s; }
+    .details-toggle[aria-expanded="true"] .chevron { transform: rotate(180deg); }
+    .details { border-top: 1px solid var(--border); margin-top: 0.6rem; }
+    .details.hidden { display: none; }
     .details-block { padding-top: 0.6rem; margin-top: 0.6rem; border-top: 1px solid var(--border); font-size: 0.95rem; }
     .details-block.hidden { display: none; }
     .dt-state { display: flex; align-items: center; gap: 0.7rem; margin: 0.4rem 0; font-weight: 600; }
@@ -224,44 +223,41 @@
           </button>
         </div>
         <div class="sum-right">
-          <button id="sum-current" class="sum-current" type="button" title="Current details" aria-label="Current details" hidden>
+          <div id="sum-current" class="sum-current" hidden>
             <svg id="sum-current-rose" viewBox="0 0 34 34" width="40" height="40" aria-hidden="true"></svg>
             <span id="sum-current-speed" class="sum-current-speed"></span>
-          </button>
+          </div>
           <div class="sum-moon">
-            <button id="sum-moon" class="sum-moon-btn" type="button" title="Moon details" aria-label="Moon details">
-              <svg id="sum-moon-glyph" viewBox="0 0 64 64" width="40" height="40" aria-hidden="true"></svg>
-            </button>
+            <svg id="sum-moon-glyph" viewBox="0 0 64 64" width="40" height="40" aria-hidden="true"></svg>
           </div>
           <button id="sum-heart" class="heart sum-heart" type="button" aria-label="Save to favourites" hidden>♡</button>
         </div>
       </div>
-      <svg id="sum-curve" viewBox="0 0 360 150" role="button" tabindex="0" aria-label="Tide details"></svg>
+      <svg id="sum-curve" viewBox="0 0 360 150" role="img" aria-label="Tide curve"></svg>
       <div class="sum-turns">
         <div class="sum-turn" id="sum-high"></div>
         <div class="sum-turn" id="sum-low"></div>
       </div>
-    </section>
-
-    <section id="details" class="card hidden">
-      <div class="details-head">
-        <h2>Details</h2>
-        <button id="details-close" class="details-close" type="button" aria-label="Hide details">✕</button>
+      <button id="details-toggle" class="details-toggle" type="button" aria-expanded="false" aria-controls="details">
+        <span>Details</span>
+        <span class="chevron" aria-hidden="true">▾</span>
+      </button>
+      <div id="details" class="details hidden">
+        <div id="details-tide" class="details-block"></div>
+        <div id="details-moon" class="details-block"></div>
+        <div id="details-current" class="details-block"></div>
       </div>
-      <div id="details-tide" class="details-block hidden"></div>
-      <div id="details-moon" class="details-block hidden"></div>
-      <div id="details-current" class="details-block hidden"></div>
     </section>
 
     <div class="card">
       <h2>Moon</h2>
-      <button class="moon-row moon-btn" id="moon-open" type="button" title="Moon details" aria-label="Moon details">
+      <div class="moon-row">
         <svg id="moon-glyph" viewBox="0 0 64 64" width="52" height="52" aria-hidden="true"></svg>
         <div>
           <div id="moon-name" class="moon-name"></div>
           <div id="moon-detail" class="muted"></div>
         </div>
-      </button>
+      </div>
     </div>
 
     <div id="favourites-card" class="card">
@@ -302,7 +298,7 @@
 
       <div class="card">
         <h2>Next few hours</h2>
-        <svg id="curve" viewBox="0 0 360 130" role="button" tabindex="0" aria-label="Tide details"></svg>
+        <svg id="curve" viewBox="0 0 360 130" role="img" aria-label="Tide curve"></svg>
         <p id="curve-note" class="muted" style="margin-bottom:0"></p>
       </div>
 
