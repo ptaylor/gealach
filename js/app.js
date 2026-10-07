@@ -285,11 +285,12 @@ async function onSubmit(e) {
   await choose(def);
 }
 
-async function choose(r) {
+async function choose(r, hide = false) {
   abort();
   setZone(r.timezone || "UTC");
   placeLabel = `${r.name}, ${r.admin1 ?? r.country}`;
-  showChoices(geoResults, r);
+  if (hide) hideChoices();
+  else showChoices(geoResults, r);
   await load({ latitude: r.latitude, longitude: r.longitude });
 }
 
@@ -397,7 +398,7 @@ function showChoices(results, picked) {
     b.type = "button";
     b.textContent = `${r.name}, ${r.admin1 ?? r.country} (${r.countryCode})`;
     if (r === picked) b.classList.add("picked");
-    b.addEventListener("click", () => choose(r));
+    b.addEventListener("click", () => choose(r, true));
     box.appendChild(b);
   }
   box.classList.remove("hidden");
