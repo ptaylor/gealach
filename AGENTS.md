@@ -55,12 +55,16 @@ not called. Where a candidate source was *not* verified, it says so (see
   constituents: we ask services for predicted series and derive from those.
 - **No UX pass yet.** The page is plain, readable and phone-sized; the look of
   it is a later conversation, by agreement.
-- **No backend, no accounts, no analytics.** Every source is called directly
-  from the browser (all three primary sources send
-  `access-control-allow-origin: *` — verified). Nothing about the user is
-  stored or sent anywhere except the place name they typed, which goes to the
-  geocoder. Favourites are an exception in name only: they live in
-  `localStorage` on the device and never leave it.
+- **No backend, no accounts.** Every source is called directly from the
+  browser (all three primary sources send `access-control-allow-origin: *` —
+  verified). Nothing about the user is stored or sent anywhere except the
+  place name they typed, which goes to the geocoder. Favourites are an
+  exception in name only: they live in `localStorage` on the device and never
+  leave it.
+- **Analytics is minimal and privacy-first.** Usage is measured with GoatCounter
+  (`gealach.goatcounter.com`, no cookies, no personal data). Custom events are
+  categorical slugs only — never the search string, a picked coordinate, or a
+  favourite's contents.
 - **No native app.** A PWA, installed from the browser.
 
 ## Data sources — verified 2026-09-30
@@ -448,6 +452,36 @@ Update this section in the same commit that adds or upgrades a dependency.
 - **Docs**:
   <https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps> ·
   <https://web.dev/learn/pwa/service-workers/>
+
+### GoatCounter (analytics)
+
+- **Role**: privacy-friendly usage measurement — page views plus categorical
+  custom events. Reverses the earlier "no analytics" non-goal (2026-10-07).
+- **Version**: `https://gealach.goatcounter.com`; loaded in `index.html` as
+  `<script data-goatcounter="https://gealach.goatcounter.com/count" async
+  src="//gc.zgo.at/count.js">`. No cookies, no personal data (IPs hashed).
+- **Best Practices**:
+  - Custom events go through one guarded helper, `trackEvent(path)` in
+    `js/app.js`, which fires `window.goatcounter.count({ path, event: true })`
+    only when `window.goatcounter` exists (it is absent offline or blocked).
+  - Event paths are **categorical slugs only** — never the typed place name, a
+    picked coordinate, or a favourite's contents — so the "nothing about the
+    user leaves the device" promise holds.
+  - The counter script is third-party (`gc.zgo.at`) and is deliberately not
+    cached by the service worker: beacons are never served stale and simply do
+    not fire offline.
+  - The footer discloses it: "Usage is measured with GoatCounter — no cookies,
+    no personal data."
+  - Event vocabulary: entry `search-name|coords|geolocate|map`; geocoding
+    `geocode-fallback-photon`, `geocode-ambiguous`; source
+    `source-marine-ie|open-meteo`; distance `distance-local|warned|global`;
+    surge `surge-shown|none`; switches `switch-marine|openmeteo`,
+    `datum-lat|odm`; engagement `details-open`, `map-open`,
+    `favourite-add|open|rename|remove`, `install-shown`, `installed`;
+    failures `error-geocode`, `error-source`. `error-no-station` and
+    `error-out-of-window` are reserved for when those failure paths become
+    explicit.
+- **Docs**: <https://www.goatcounter.com/> · <https://www.goatcounter.com/api.html>
 
 ### Marine Institute ERDDAP (primary data source)
 

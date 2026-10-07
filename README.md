@@ -59,6 +59,10 @@ The site is then served at <https://ptaylor.github.io/gealach/>.
 Details, endpoints, datums and the traps that were hit live in
 `docs/data-sources.md`. The formulas are in `docs/derivations.md`.
 
+Usage is measured with **GoatCounter** — no cookies, no personal data. Custom
+events are categorical only: the search string and picked coordinates never
+leave the device.
+
 ## Layout
 
 See `AGENTS.md` — the single deliberate departure from the house single-file

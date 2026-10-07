@@ -32,6 +32,26 @@ const $ = (id) => document.getElementById(id);
 const iso = (d) => d.toISOString();
 const isoHoursAgo = (h) => new Date(Date.now() - h * 3600000).toISOString();
 
+// GoatCounter: cookie-less, no personal data. Custom events are categorical
+// slugs only — never a search string or a picked coordinate. The counter
+// script (gc.zgo.at/count.js) is absent when offline or blocked, so every
+// fire is a no-op unless window.goatcounter exists.
+function trackEvent(path) {
+  if (typeof window !== "undefined" && window.goatcounter) {
+    window.goatcounter.count({ path, event: true });
+  }
+}
+
+// Which distance band the resolved station sits in, so the primary-vs-global
+// split and the "distant station" warning are measurable.
+function distanceBandEvent(r) {
+  if (r.kind === "global-model") return "distance-global";
+  if (r.distanceKm == null) return "distance-global";
+  if (r.distanceKm <= MAX_STATION_DISTANCE_KM) return "distance-local";
+  if (r.distanceKm <= GLOBAL_MODEL_FALLBACK_KM) return "distance-warned";
+  return "distance-global";
+}
+
 const ATTRIBUTION =
   "Data: Marine Institute (CC-BY 4.0) · Open-Meteo & GeoNames (CC-BY 4.0) · NOAA · OpenStreetMap (ODbL).";
 
@@ -117,6 +137,15 @@ async function init() {
     navigator.serviceWorker.register("sw.js").catch(() => {});
   }
 
+  // Installability: count how often the browser offers installation and how
+  // often it is accepted. No preventDefault — the native prompt stays intact.
+  window.addEventListener("beforeinstallprompt", () => {
+    trackEvent("install-shown");
+  });
+  window.addEventListener("appinstalled", () => {
+    trackEvent("installed");
+  });
+
   window.addEventListener("offline", () => setOffline(true));
   window.addEventListener("online", () => setOffline(false));
   setOffline(!navigator.onLine);
@@ -134,6 +163,7 @@ function toggleMap() {
   card.classList.toggle("hidden", !show);
   $("map-toggle").setAttribute("aria-expanded", String(show));
   if (show) {
+    trackEvent("map-open");
     initMap();
     // Leaflet measures its container on creation; re-measure once it is shown.
     requestAnimationFrame(() => map && map.invalidateSize());
@@ -179,6 +209,7 @@ function placeMarker(lat, lon) {
 }
 
 async function onMapClick(e) {
+  trackEvent("search-map");
   resolvePoint(e.latlng.lat, e.latlng.lng);
 }
 
@@ -194,6 +225,7 @@ function locateMe() {
     (pos) => {
       btn.disabled = false;
       const { latitude: lat, longitude: lon } = pos.coords;
+      trackEvent("search-geolocate");
       initMap();
       map.setView([lat, lon], 14);
       resolvePoint(lat, lon);
@@ -262,16 +294,19 @@ async function onSubmit(e) {
     if (Math.abs(lat) <= 90 && Math.abs(lon) <= 180) {
       setZone("UTC");
       placeLabel = `${lat.toFixed(4)}, ${lon.toFixed(4)} (coordinates — UTC shown)`;
+      trackEvent("search-coords");
       await load({ latitude: lat, longitude: lon });
       return;
     }
   }
 
+  trackEvent("search-name");
   let geo;
   try {
     geo = await geocode(q, { signal: controller.signal });
   } catch (err) {
     if (err.name === "AbortError") return;
+    trackEvent("error-geocode");
     setStatus(`Could not look up “${q}”: ${err.message}`);
     return;
   }
@@ -286,13 +321,17 @@ async function onSubmit(e) {
   if (!results.some((r) => r.countryCode === "IE")) {
     try {
       const photon = await photonSearch(q, { signal: controller.signal });
-      results = mergeGeoResults(results, photon.results);
+      if (photon.results.length) {
+        trackEvent("geocode-fallback-photon");
+        results = mergeGeoResults(results, photon.results);
+      }
     } catch (err) {
       if (err.name === "AbortError") return;
       /* keep the Open-Meteo results on a Photon failure */
     }
   }
   geoResults = results;
+  if (results.length > 1) trackEvent("geocode-ambiguous");
   const def = results.find((r) => r.countryCode === "IE") || results[0];
   showChoices(results, def);
   await choose(def);
@@ -357,8 +396,12 @@ async function load(point) {
 
     setStatus("");
     render();
+    trackEvent(tideResult.source === "marine-ie" ? "source-marine-ie" : "source-open-meteo");
+    trackEvent(distanceBandEvent(tideResult));
+    trackEvent(surgeResult && surgeResult.series.length ? "surge-shown" : "surge-none");
   } catch (err) {
     if (err.name === "AbortError") return;
+    trackEvent("error-source");
     setStatus(`Something went wrong: ${err.message}`);
   }
 }
@@ -471,6 +514,7 @@ function setZone(z) {
 
 function toggleDatum() {
   datumChoice = datumChoice === "LAT" ? "ODM" : "LAT";
+  trackEvent(datumChoice === "LAT" ? "datum-lat" : "datum-odm");
   if (tideResult) {
     render();
     renderTideBlock();
@@ -657,6 +701,7 @@ function toggleFavourite() {
   const existing = favourites.find((f) => f.id === id);
   if (existing) {
     favourites = favourites.filter((f) => f.id !== id);
+    trackEvent("favourite-remove");
   } else {
     favourites.push({
       id,
@@ -665,6 +710,7 @@ function toggleFavourite() {
       longitude: currentPoint.longitude,
       timezone: zone,
     });
+    trackEvent("favourite-add");
   }
   persistFavourites();
   renderFavourites();
@@ -714,6 +760,7 @@ function renderFavourites() {
     remove.setAttribute("aria-label", `Remove ${f.name}`);
     remove.addEventListener("click", () => {
       favourites = favourites.filter((x) => x.id !== f.id);
+      trackEvent("favourite-remove");
       persistFavourites();
       renderFavourites();
       renderHeart();
@@ -734,6 +781,7 @@ function beginRename(li, f) {
   const commit = () => {
     const name = input.value.trim();
     if (name) f.name = name;
+    trackEvent("favourite-rename");
     persistFavourites();
     renderFavourites();
   };
@@ -751,6 +799,7 @@ function beginRename(li, f) {
 }
 
 function goFavourite(f) {
+  trackEvent("favourite-open");
   abort();
   hideChoices();
   $("result").classList.add("hidden");
@@ -1022,6 +1071,7 @@ function renderTideBlock() {
 function toggleDetails() {
   const details = $("details");
   if (details.classList.contains("hidden")) {
+    trackEvent("details-open");
     openDetails();
   } else {
     details.classList.add("hidden");
@@ -1058,6 +1108,7 @@ function renderSourceSwitch() {
 async function setSource(source) {
   if (source === sourceChoice) return;
   sourceChoice = source;
+  trackEvent(source === "marine-ie" ? "switch-marine" : "switch-openmeteo");
   if (!currentPoint) return;
   abort();
   await load(currentPoint);
