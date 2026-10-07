@@ -64,6 +64,7 @@
     .brand-icon { width: 42px; height: 42px; flex: none; transform: translateY(2px); }
     .t-geal { color: var(--brand-silver); }
     .t-ach { color: var(--brand-blue); }
+    .brand-name { font-family: Georgia, 'Times New Roman', serif; font-style: italic; }
     .tagline { color: var(--muted); margin: 0.2rem 0 1rem; }
 
     form { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
@@ -203,7 +204,7 @@
     <header>
       <div class="brand" id="brand">
         <img src="icons/icon.svg" alt="" class="brand-icon" />
-        <h1><span class="t-geal">Geal</span><span class="t-ach">ach</span></h1>
+        <h1 class="brand-name"><span class="t-geal">geal</span><span class="t-ach">ach</span></h1>
       </div>
       <p class="tagline">What the sea is doing at a coastal place.</p>
     </header>
@@ -364,7 +365,7 @@
   <div id="info-overlay" class="overlay hidden">
     <div class="overlay-panel">
       <img src="icons/icon.svg" alt="" class="info-icon" />
-      <h2><span class="t-geal">Geal</span><span class="t-ach">ach</span></h2>
+      <h2 class="brand-name"><span class="t-geal">geal</span><span class="t-ach">ach</span></h2>
       <div class="info-version" id="info-version"></div>
       <div class="info-tagline">Tides for a coastal place.</div>
       <a class="info-link" href="https://github.com/ptaylor/gealach/issues/new?template=bug-report.md" target="_blank" rel="noopener">🐛 Report a bug</a>
