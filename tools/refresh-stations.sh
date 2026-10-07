@@ -6,8 +6,9 @@ set -eu
 #
 # data/station-map.json is NOT generated here: it maps three spellings of each
 # station key (prediction `stationID`, gauge-network `station_id`, surge-observation
-# `stationID`) and is hand-checked, not guessed. Its shape is an array:
-#   [ { "prediction": "Galway", "gauge": "Galway Port", "surge": "Galway" }, … ]
+# `stationID`) and is hand-checked, not guessed. Its shape is a wrapper object
+# whose `map` value is the list:
+#   { "map": [ { "prediction": "Galway", "gauge": "Galway Port", "surge": "Galway" }, … ] }
 #
 # Generated with an AI coding assistant.
 # Assisted-by: GitHub Copilot (DeepSeek V4 Pro)

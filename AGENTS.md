@@ -18,9 +18,10 @@ three ES modules, the PWA shell, the tests and the docs. The vendored station
 snapshot (`data/stations.json`) is **generated** — `tools/refresh-stations.sh`
 regenerated all 38 stations on **2026-10-07** once `erddap.marine.ie` recovered
 from the HTTP 504 it was returning on **2026-10-04**. The hand-checked key
-mapping (`data/station-map.json`) is **still not generated**, so the surge
-feature stays silent until it exists; everything else answers Irish points
-from the Marine Institute prediction datasets.
+mapping (`data/station-map.json`) is **generated** on **2026-10-07** by matching
+the three station-list spellings against the live `distinct()` responses, so
+the surge feature now answers Irish points from the Marine Institute prediction
+and observation datasets.
 
 The research below was executed against the live services on **2026-09-30**
 (ERDDAP) and **2026-10-04** (Open-Meteo, NOAA); the observed output is
