@@ -165,6 +165,17 @@
     footer .notice { color: var(--muted); border-top: 1px solid var(--border); padding-top: 0.6rem; }
     .muted { color: var(--muted); }
     .hidden { display: none; }
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      padding: 0;
+      border: 0;
+      clip-path: inset(50%);
+      overflow: hidden;
+      white-space: nowrap;
+    }
 
     .brand { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; cursor: default; }
     .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; z-index: 2000; padding: 1.2rem; }
@@ -207,8 +218,9 @@
     </header>
 
     <form id="search" role="search">
-      <input id="q" type="search" inputmode="search" autocomplete="off"
+      <input id="q" type="search" inputmode="search" enterkeyhint="search" autocomplete="off"
              placeholder="Place name, or 53.27, -9.05" aria-label="Place name or coordinates" />
+      <button type="submit" class="visually-hidden">Search</button>
       <button type="button" id="map-toggle" class="secondary" aria-expanded="false">Map</button>
     </form>
 

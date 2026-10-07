@@ -78,6 +78,12 @@ init();
 
 async function init() {
   $("search").addEventListener("submit", onSubmit);
+  // iOS fires a `search` event on a type=search input instead of submitting the
+  // form; route it through the same path so the keyboard search key works there.
+  $("q").addEventListener("search", (e) => {
+    e.preventDefault();
+    onSubmit(e);
+  });
   $("map-toggle").addEventListener("click", toggleMap);
   $("sum-locate").addEventListener("click", showOnMap);
   $("sum-name").addEventListener("click", showOnMap);
@@ -278,10 +284,19 @@ async function namePoint(lat, lon) {
 // ---------------------------------------------------------------------------
 // search flow
 
+let lastSearchQ = "";
+let lastSearchMs = 0;
+
 async function onSubmit(e) {
   e.preventDefault();
   const q = $("q").value.trim();
   if (!q) return;
+  // A browser can fire both `search` and `submit` for one action; de-duplicate
+  // the identical query within a second rather than fetching twice.
+  const now = Date.now();
+  if (q === lastSearchQ && now - lastSearchMs < 1000) return;
+  lastSearchQ = q;
+  lastSearchMs = now;
   abort();
   hideChoices();
   $("result").classList.add("hidden");
