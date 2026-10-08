@@ -136,6 +136,20 @@ Traps, each one observed rather than guessed:
   compact names (`Galway`, `Dublinport`, `Malinhead`, `Tmbridge`, `Unionhall`).
   Joining them needs an explicit mapping table; a lookup on the string alone
   finds nothing (`station_id="Galway"` returns `nRows = 0`).
+- **The high/low and curve datasets spell twelve stations differently.** The
+  curve dataset (`imiTidePrediction`) appends `_MODELLED` to the stations it
+  derives from the regional ROMS model, while the turns dataset
+  (`IMI_TidePrediction_HighLow`) keeps the plain name: the high/low list has
+  `Bray_Harbour`, `Wicklow`, `Kinsale`, `Dungarvan`, `Lahinch`,
+  `Achill_Island`, `Carrigaholt`, `Clare_Island`, `Crosshaven`,
+  `Killary_Harbour`, `Letterfrack` and `Tory_Island`; the curve list has each
+  with `_MODELLED`. Asking `imiTidePrediction` for the high/low spelling
+  returns `nRows = 0` — an **HTTP 404**, not an empty table — and takes the
+  whole lookup down with it (seen 2026-10-08 for Bray). The curve id is
+  therefore generated into `data/stations.json` as `curveId` (verified against
+  the curve dataset's own `distinct()` list, not derived by string surgery) and
+  carried by `js/sources.js`; `kind` is set from it too, so these twelve read
+  "model", not "gauge".
 - **Prediction coverage moves.** At the time of writing `imiTidePrediction`
   spanned 2026-01-01 → 2029-01-01, and Marine Institute documents prediction
   generation for a 6-day window up to two years ahead. Never assume the end
@@ -144,7 +158,8 @@ Traps, each one observed rather than guessed:
 - **Not every "station" is a gauge.** The dataset's `files/` listing contains
   `TP_Achill_Island_MODELLED.nc` beside `TP_Aranmore.nc`: Marine Institute
   derives predictions from gauge harmonic analysis *and* from its regional ROMS
-  model. Which kind it is changes what the number means.
+  model. Which kind it is changes what the number means — and it is what
+  decides the curve station id (above).
 - **Harmonic constituents are not published here.** A search of the server for
   `harmonic` returns nothing but the tide datasets themselves, so a real form
   factor cannot be computed from what we have — see *Springs and neaps*.
@@ -363,7 +378,7 @@ Two platform traps to remember, both of which cost an afternoon if forgotten:
 | `sw.js` | Service worker: app shell cache, and a short-TTL cache for API responses. |
 | `manifest.webmanifest` | Name, icons, colours, `display: standalone`. |
 | `icons/` | `icon.svg` source plus generated PNG sizes; generated, not drawn by hand. |
-| `data/stations.json` | Vendored snapshot of the 38 prediction stations: `{ id, name, latitude, longitude, kind }`, with the regeneration command and date in its header. |
+| `data/stations.json` | Vendored snapshot of the 38 prediction stations: `{ id, name, latitude, longitude, curveId, kind }`, with the regeneration command and date in its header. `curveId` is the `imiTidePrediction` spelling, which differs from `id` for the twelve modelled stations. |
 | `data/station-map.json` | The name mapping between the three spellings: `{ prediction, gauge, surge }` per station. Hand-checked, not guessed. |
 | `tools/refresh-stations.sh` | Regenerates `data/stations.json` from ERDDAP (`curl` + `jq`). |
 | `tools/make-icons.sh` | Rasterises `icons/icon.svg` with ImageMagick. |

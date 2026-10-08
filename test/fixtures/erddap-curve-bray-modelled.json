@@ -1,0 +1,31 @@
+{
+  "table": {
+    "columnNames": [
+      "stationID",
+      "time",
+      "Water_Level",
+      "Water_Level_ODM"
+    ],
+    "columnTypes": [
+      "String",
+      "String",
+      "double",
+      "double"
+    ],
+    "rows": [
+      ["Bray_Harbour_MODELLED", "2026-10-08T18:00:00Z", 1.8, -0.3899999999999999],
+      ["Bray_Harbour_MODELLED", "2026-10-08T18:05:00Z", 1.86, -0.32999999999999985],
+      ["Bray_Harbour_MODELLED", "2026-10-08T18:10:00Z", 1.92, -0.27],
+      ["Bray_Harbour_MODELLED", "2026-10-08T18:15:00Z", 1.98, -0.20999999999999996],
+      ["Bray_Harbour_MODELLED", "2026-10-08T18:20:00Z", 2.04, -0.1499999999999999],
+      ["Bray_Harbour_MODELLED", "2026-10-08T18:25:00Z", 2.11, -0.08000000000000007],
+      ["Bray_Harbour_MODELLED", "2026-10-08T18:30:00Z", 2.17, -0.020000000000000018],
+      ["Bray_Harbour_MODELLED", "2026-10-08T18:35:00Z", 2.23, 0.040000000000000036],
+      ["Bray_Harbour_MODELLED", "2026-10-08T18:40:00Z", 2.29, 0.10000000000000009],
+      ["Bray_Harbour_MODELLED", "2026-10-08T18:45:00Z", 2.36, 0.16999999999999993],
+      ["Bray_Harbour_MODELLED", "2026-10-08T18:50:00Z", 2.42, 0.22999999999999998],
+      ["Bray_Harbour_MODELLED", "2026-10-08T18:55:00Z", 2.48, 0.29000000000000004],
+      ["Bray_Harbour_MODELLED", "2026-10-08T19:00:00Z", 2.54, 0.3500000000000001]
+    ]
+  }
+}

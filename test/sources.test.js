@@ -97,6 +97,55 @@ test("marineIeTides throws when there is no station", async () => {
   );
 });
 
+test("marineIeTides asks the curve dataset for the modelled spelling", async () => {
+  // The high/low list uses `Bray_Harbour`; the curve dataset uses
+  // `Bray_Harbour_MODELLED`. Asking for the display id returns nRows = 0 and a
+  // 404, so the snapshot's curveId must be what the curve request carries.
+  const stations = [
+    {
+      id: "Bray_Harbour",
+      name: "Bray_Harbour",
+      curveId: "Bray_Harbour_MODELLED",
+      kind: "model",
+      latitude: 53.2191,
+      longitude: -6.0901,
+    },
+  ];
+  const seen = [];
+  globalThis.fetch = async (url) => {
+    const u = String(url);
+    seen.push(u);
+    if (u.includes("IMI_TidePrediction_HighLow")) {
+      return jsonResponse(await fixture("erddap-highlow-bray.json"));
+    }
+    if (u.includes("imiTidePrediction")) {
+      return jsonResponse(await fixture("erddap-curve-bray-modelled.json"));
+    }
+    throw new Error(`unexpected URL in test: ${u}`);
+  };
+
+  const out = await marineIeTides(
+    { latitude: 53.2191, longitude: -6.0901 },
+    {
+      curveStart: "2026-10-08T18:00:00Z",
+      curveEnd: "2026-10-08T19:00:00Z",
+      extremesStart: "2026-10-08T18:00:00Z",
+      extremesEnd: "2026-10-09T06:00:00Z",
+    },
+    stations,
+  );
+
+  const curveCall = seen.find((u) => u.includes("imiTidePrediction"));
+  assert.ok(
+    /stationID=%22Bray_Harbour_MODELLED%22|stationID="Bray_Harbour_MODELLED"/.test(curveCall),
+    `curve request must use the modelled id, got: ${curveCall}`,
+  );
+  assert.equal(out.station, "Bray_Harbour", "display id is the high/low spelling");
+  assert.equal(out.kind, "model");
+  assert.equal(out.series.length, 13);
+  assert.equal(out.series[0].height, 1.8);
+});
+
 test("marineIeTides throws when the curve is empty", async () => {
   const stations = [{ id: "Galway", latitude: 53.27, longitude: -9.05 }];
   route([

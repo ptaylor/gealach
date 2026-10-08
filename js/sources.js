@@ -267,6 +267,12 @@ export async function marineIeTides(point, windows = {}, stations = [], { signal
   if (!near) throw new Error("no Marine Institute prediction station available");
 
   const stationId = near.id;
+  // The curve dataset spells twelve of its stations differently from the
+  // high/low dataset (it appends `_MODELLED` to the ROMS-derived ones), so
+  // asking it for the display id returns nRows = 0 and a 404. The vendored
+  // snapshot carries the curve spelling; fall back to the id itself when the
+  // list predates that field.
+  const curveId = near.curveId ?? stationId;
 
   // The turns. Only the OD Malin height is documented for this dataset.
   const hlUrl = erddapUrl(
@@ -286,7 +292,7 @@ export async function marineIeTides(point, windows = {}, stations = [], { signal
     "imiTidePrediction",
     ["stationID", "time", "Water_Level", "Water_Level_ODM"],
     [
-      ["stationID=", `"${stationId}"`],
+      ["stationID=", `"${curveId}"`],
       ["time>=", w.curveStart],
       ["time<=", w.curveEnd],
     ],
@@ -295,7 +301,7 @@ export async function marineIeTides(point, windows = {}, stations = [], { signal
   const curveRows = rowsToObjects(curve.data.table);
 
   if (!curveRows.length) {
-    throw new Error(`no curve predictions for ${stationId} in the requested window`);
+    throw new Error(`no curve predictions for ${curveId} in the requested window`);
   }
 
   const series = curveRows.map((r) => ({
@@ -318,7 +324,7 @@ export async function marineIeTides(point, windows = {}, stations = [], { signal
     source: "marine-ie",
     station: stationId,
     stationName: near.name ?? stationId,
-    kind: near.kind ?? (/MODELLED/i.test(stationId) ? "model" : "gauge"),
+    kind: near.kind ?? (/MODELLED/i.test(curveId) ? "model" : "gauge"),
     latitude: near.latitude,
     longitude: near.longitude,
     distanceKm: near.distanceKm,

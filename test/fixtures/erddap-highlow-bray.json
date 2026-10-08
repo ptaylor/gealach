@@ -1,0 +1,20 @@
+{
+  "table": {
+    "columnNames": [
+      "stationID",
+      "time",
+      "tide_time_category",
+      "Water_Level_ODMalin"
+    ],
+    "columnTypes": [
+      "String",
+      "String",
+      "String",
+      "double"
+    ],
+    "rows": [
+      ["Bray_Harbour", "2026-10-08T21:55:00Z", "HIGH", 1.708],
+      ["Bray_Harbour", "2026-10-09T04:00:00Z", "LOW", -1.875]
+    ]
+  }
+}
