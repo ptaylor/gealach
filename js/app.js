@@ -351,10 +351,13 @@ async function onSubmit(e) {
   if (results.length > 1) trackEvent("geocode-ambiguous");
   const def = results.find((r) => r.countryCode === "IE") || results[0];
   showChoices(results, def);
-  await choose(def);
+  // First result chosen automatically, but keep the alternatives on screen so
+  // the reader can pick a different match (requirement: show the alternatives
+  // rather than silently choosing).
+  await choose(def, { keepChoices: true });
 }
 
-async function choose(r, hide = false) {
+async function choose(r, { fromChip = false, keepChoices = false } = {}) {
   abort();
   let tz = r.timezone || "UTC";
   if (!r.timezone) {
@@ -366,11 +369,11 @@ async function choose(r, hide = false) {
       tz = "UTC";
     }
   }
-  if (hide) hideChoices();
+  if (fromChip) hideChoices();
   else showChoices(geoResults, r);
   await loadPoint(
     { latitude: r.latitude, longitude: r.longitude },
-    { zone: tz, label: `${r.name}, ${r.admin1 ?? r.country}` },
+    { zone: tz, label: `${r.name}, ${r.admin1 ?? r.country}`, keepChoices },
   );
 }
 
@@ -428,9 +431,12 @@ async function load(point) {
 // the previous choices and result, apply the place's label and timezone, and
 // load. Callers that need the timezone before loading still call abort() first
 // (a second abort is harmless).
-function loadPoint(point, { zone: tz, label } = {}) {
+function loadPoint(point, { zone: tz, label, keepChoices = false } = {}) {
   abort();
-  hideChoices();
+  // Keep the alternatives list on screen when the load came from a name
+  // search; a map pick, a geolocate or a favourite open replaces the location
+  // entirely, so those clear it.
+  if (!keepChoices) hideChoices();
   $("result").classList.add("hidden");
   setSearchError("");
   if (tz) setZone(tz);
@@ -517,7 +523,7 @@ function showChoices(results, picked) {
     b.type = "button";
     b.textContent = `${r.name}, ${r.admin1 ?? r.country} (${r.countryCode})`;
     if (r === picked) b.classList.add("picked");
-    b.addEventListener("click", () => choose(r, true));
+    b.addEventListener("click", () => choose(r, { fromChip: true }));
     box.appendChild(b);
   }
   box.classList.remove("hidden");
