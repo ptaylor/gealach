@@ -56,11 +56,14 @@ if [[ -n "$(git status --porcelain)" ]]; then
   exit 1
 fi
 
-# --- Stamp the version into the page (the about overlay reads it) ---
+# --- Stamp the version into the page (the about overlay reads it) and bump
+# the service-worker cache version too: the shell cache is cache-first, so a
+# release must invalidate it or installed devices keep serving a stale page. ---
 sed -i.bak "s|content=\"v[0-9][0-9.]*\"|content=\"${NEXT_VERSION}\"|" index.html
-rm -f index.html.bak
-if ! git diff --quiet index.html; then
-  git add index.html
+sed -i.bak "s|const VERSION = \"v[0-9][0-9.]*\";|const VERSION = \"${NEXT_VERSION}\";|" sw.js
+rm -f index.html.bak sw.js.bak
+if ! git diff --quiet -- index.html sw.js; then
+  git add index.html sw.js
   git commit -m "Bump version to ${NEXT_VERSION}"
 fi
 
