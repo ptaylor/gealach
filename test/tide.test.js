@@ -101,6 +101,14 @@ test("rangeAnalysis labels springs and neaps from a synthetic fortnight", () => 
   assert.equal(neap.label, "neaps");
 });
 
+test("rangeAnalysis with too few turns returns nulls", () => {
+  const out = rangeAnalysis([{ time: "2026-09-30T06:00:00Z", type: "HIGH", height: 1 }]);
+  assert.equal(out.label, null);
+  assert.equal(out.nextSpring, null);
+  assert.equal(out.nextNeap, null);
+  assert.equal(out.basis, "range-inference");
+});
+
 test("rangeAnalysis names the next spring after now", () => {
   const extremes = synthExtremes(30);
   const base = Date.parse("2026-09-30T00:00:00Z");
