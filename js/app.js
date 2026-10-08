@@ -466,6 +466,11 @@ function activeSeries(r) {
     : r.series;
 }
 
+/** Whether the result carries an OD Malin series alongside the primary datum. */
+function hasODMSeries(r) {
+  return Array.isArray(r.seriesODM) && r.seriesODM.length > 0;
+}
+
 function renderSurge() {
   const card = $("surge-card");
   const box = $("surge");
@@ -906,7 +911,7 @@ function renderSummary() {
   const turns = nextTurns(r.extremes, now);
   drawSummaryCurve(series, now, turns);
 
-  const hasODM = Array.isArray(r.seriesODM) && r.seriesODM.length > 0;
+  const hasODM = hasODMSeries(r);
   $("sum-high").textContent = summaryTurnText("High", turns.nextHigh, hasODM);
   $("sum-low").textContent = summaryTurnText("Low", turns.nextLow, hasODM);
 }
@@ -1045,7 +1050,7 @@ function renderTideBlock() {
   }
 
   const series = activeSeries(r);
-  const hasODM = Array.isArray(r.seriesODM) && r.seriesODM.length > 0;
+  const hasODM = hasODMSeries(r);
   const useODM = datumChoice === "ODM" && hasODM;
   const st = tideStateAt(series, now);
   let arrow = "";
@@ -1140,8 +1145,7 @@ async function setSource(source) {
   sourceChoice = source;
   trackEvent(source === "marine-ie" ? "switch-marine" : "switch-openmeteo");
   if (!currentPoint) return;
-  abort();
-  await load(currentPoint);
+  await loadPoint(currentPoint);
   openDetails();
 }
 
