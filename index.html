@@ -86,13 +86,13 @@
     .locate { position: absolute; top: 10px; right: 10px; z-index: 1000; background: var(--card); border: 1px solid var(--border); border-radius: 8px; font-size: 1.1rem; line-height: 1; padding: 0.45rem 0.6rem; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,.25); }
     .locate:disabled { opacity: 0.6; cursor: default; }
 
-    .sum-indicators { display: flex; align-items: center; justify-content: center; gap: 2.2rem; margin: 0.7rem 0 1rem; }
+    .sum-indicators { display: flex; align-items: center; justify-content: center; gap: 4rem; margin: 0.7rem 0 1rem; }
     .sum-current { display: flex; align-items: center; gap: 0.25rem; }
     .sum-current-speed { font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 
     .heart { flex: none; background: var(--card); border: 1px solid var(--border); border-radius: 999px; font-size: 1.15rem; line-height: 1; color: var(--moon-lit); padding: 0.45rem 0.75rem; cursor: pointer; white-space: nowrap; }
     .heart.saved { color: var(--moon-lit); border-color: var(--moon-lit); }
-    .sum-heart { width: 40px; height: 40px; padding: 0; font-size: 1.3rem; display: flex; align-items: center; justify-content: center; border-radius: 999px; }
+    .sum-heart { width: auto; height: auto; padding: 0.2rem; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; background: none; border: 0; border-radius: 0; }
 
     .faves { list-style: none; margin: 0; padding: 0; }
     .faves li { display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0; border-bottom: 1px solid var(--grid); }
@@ -176,7 +176,7 @@
     .source-switch button.selected { color: var(--accent); border-color: var(--accent); }
     .source-switch button:disabled { opacity: 0.45; cursor: default; }
     .details-block { padding-top: 0.6rem; margin-top: 0.6rem; border-top: 1px solid var(--border); font-size: 0.95rem; }
-    #details h2 { font-size: 1rem; }
+    #details h2 { font-size: 1rem; color: var(--accent); }
     .details-block.hidden { display: none; }
     .dt-state { display: flex; align-items: center; gap: 0.7rem; margin: 0.4rem 0; font-weight: 600; }
     .dt-arrow { width: 15px; height: 45px; flex: none; }
@@ -223,12 +223,12 @@
         <button id="sum-heart" class="heart sum-heart" type="button" aria-label="Save to favourites" hidden>♡</button>
       </div>
       <div class="sum-indicators">
+        <div class="sum-moon">
+          <svg id="sum-moon-glyph" viewBox="0 0 64 64" width="40" height="40" aria-hidden="true"></svg>
+        </div>
         <div id="sum-current" class="sum-current" hidden>
           <svg id="sum-current-rose" viewBox="0 0 34 34" width="40" height="40" aria-hidden="true"></svg>
           <span id="sum-current-speed" class="sum-current-speed"></span>
-        </div>
-        <div class="sum-moon">
-          <svg id="sum-moon-glyph" viewBox="0 0 64 64" width="40" height="40" aria-hidden="true"></svg>
         </div>
       </div>
       <svg id="sum-curve" viewBox="0 0 360 150" role="img" aria-label="Tide curve"></svg>
@@ -246,8 +246,8 @@
           <button type="button" data-source="open-meteo">Open-Meteo</button>
         </div>
         <div id="details-tide" class="details-block"></div>
-        <div id="details-moon" class="details-block"></div>
         <div id="details-current" class="details-block"></div>
+        <div id="details-moon" class="details-block"></div>
       </div>
     </section>
 
