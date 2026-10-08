@@ -448,6 +448,21 @@ function render() {
   const now = new Date();
   $("result").classList.remove("hidden");
 
+  // Situational caveat, up front: a prediction from far away (or from the
+  // global model) is not a prediction for here (requirements 3 and 10).
+  const warnEl = $("proximity-warning");
+  if (r.kind === "global-model") {
+    warnEl.textContent =
+      "Outside the Irish prediction stations — showing the global model (Open-Meteo).";
+    warnEl.classList.remove("hidden");
+  } else if (r.distanceKm != null && r.distanceKm > MAX_STATION_DISTANCE_KM) {
+    warnEl.textContent = `Nearest prediction station is ${km(r.distanceKm)} away — this is not a prediction for here.`;
+    warnEl.classList.remove("hidden");
+  } else {
+    warnEl.textContent = "";
+    warnEl.classList.add("hidden");
+  }
+
   // Surge
   renderSurge();
 
@@ -1024,12 +1039,8 @@ function renderTideBlock() {
     r.kind === "global-model" ? "global model" :
     r.kind === "model" ? "model" : "prediction station";
 
-  let warn = "";
-  if (r.kind === "global-model") {
-    warn = `<div class="dt-warn">Outside the Irish prediction stations — showing the global model (Open-Meteo).</div>`;
-  } else if (r.distanceKm != null && r.distanceKm > MAX_STATION_DISTANCE_KM) {
-    warn = `<div class="dt-warn">Nearest prediction station is ${km(r.distanceKm)} away — this is not a prediction for here.</div>`;
-  }
+  // The distance / global-model caveat is shown as a banner above the card
+  // (see render()), so it is not repeated here.
 
   const spring = rangeAnalysis(r.extremes, now);
   const label =
@@ -1094,13 +1105,11 @@ function renderTideBlock() {
     `<div class="muted">${escapeHtml(r.stationName)} — ${kindWord}` +
     (r.distanceKm != null ? ` · ${km(r.distanceKm)} from where you asked` : "") +
     `</div>` +
-    warn +
     `<div>Currently: <strong>${label}</strong> <span class="muted">(inferred from the predicted range)</span></div>` +
     nextLines.join("") +
     `<div class="dt-state"><svg class="dt-arrow" viewBox="0 0 32 96" aria-hidden="true">${arrow}</svg><span>${stateText}</span></div>` +
     `<div class="muted">${rangeLine}${rangeLine ? " · " : ""}station ${escapeHtml(r.station)} · ${datumHtml} · fetched ${fmtDayTime(r.fetchedAt, zone)}</div>` +
-    surge +
-    `<div class="muted">Not for navigation. Predictions exclude storm surge. Modelled currents are model output.</div>`;
+    surge;
 }
 
 function toggleDetails() {

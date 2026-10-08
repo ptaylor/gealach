@@ -194,7 +194,6 @@
     .details-block.hidden { display: none; }
     .dt-state { display: flex; align-items: center; gap: 0.7rem; margin: 0.4rem 0; font-weight: 600; }
     .dt-arrow { width: 15px; height: 45px; flex: none; }
-    .dt-warn { color: var(--warn); margin: 0.3rem 0; }
     .dt-moon-row, .dt-cur-row { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.4rem; }
     .dt-moon-name { font-weight: 600; }
     .dt-cur-speed { font-size: 1.2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -276,6 +275,8 @@
     <p id="status" class="status hidden" role="status"></p>
 
     <section id="result" class="hidden">
+      <div id="proximity-warning" class="warning hidden"></div>
+
       <div class="card hidden" id="surge-card">
         <h2>Surge — observed, separate from the prediction</h2>
         <div id="surge"></div>
