@@ -739,9 +739,23 @@ function renderHeart() {
   }
   btn.hidden = false;
   const saved = isFavourited(currentPoint);
-  btn.textContent = saved ? "♥" : "♡";
+  btn.innerHTML = iconSvg(saved ? "heart-filled" : "heart");
   btn.classList.toggle("saved", saved);
   btn.setAttribute("aria-label", saved ? "Remove from favourites" : "Save to favourites");
+}
+
+// Small inline SVG icons, so the UI does not depend on emoji rendering (which
+// varies by platform and clashes with the crisp inline SVGs used elsewhere).
+function iconSvg(name) {
+  const paths = {
+    heart:
+      `<path fill="none" stroke="currentColor" stroke-width="2" d="M12 20.3l-1.45-1.32C5.4 14.24 2 11.16 2 7.4A5.4 5.4 0 0 1 7.4 2c1.74 0 3.41.81 4.6 2.09A6.02 6.02 0 0 1 16.6 2 5.4 5.4 0 0 1 22 7.4c0 3.76-3.4 6.84-8.55 11.59z"/>`,
+    "heart-filled":
+      `<path fill="currentColor" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09A5.99 5.99 0 0 1 16.5 3C19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54z"/>`,
+    pencil:
+      `<path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>`,
+  };
+  return `<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">${paths[name] ?? ""}</svg>`;
 }
 
 function removeFavourite(id) {
@@ -775,14 +789,14 @@ function toggleFavourite() {
 
 function renderFavourites() {
   const list = $("favourites-list");
+  const card = $("favourites-card");
   list.innerHTML = "";
+  // Before anything is saved the card is pure noise — fold it away entirely.
   if (!favourites.length) {
-    const li = document.createElement("li");
-    li.className = "fave-empty";
-    li.textContent = "No favourites yet — search for a place, then tap ♡.";
-    list.appendChild(li);
+    card.classList.add("hidden");
     return;
   }
+  card.classList.remove("hidden");
 
   for (const f of favourites) {
     const li = document.createElement("li");
@@ -803,7 +817,7 @@ function renderFavourites() {
     const rename = document.createElement("button");
     rename.type = "button";
     rename.className = "fave-rename";
-    rename.textContent = "✎";
+    rename.innerHTML = iconSvg("pencil");
     rename.title = "Rename";
     rename.setAttribute("aria-label", `Rename ${f.name}`);
     rename.addEventListener("click", () => beginRename(li, f));
@@ -811,7 +825,7 @@ function renderFavourites() {
     const remove = document.createElement("button");
     remove.type = "button";
     remove.className = "fave-remove saved";
-    remove.textContent = "♥";
+    remove.innerHTML = iconSvg("heart-filled");
     remove.title = "Remove";
     remove.setAttribute("aria-label", `Remove ${f.name}`);
     remove.addEventListener("click", () => removeFavourite(f.id));

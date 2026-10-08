@@ -79,6 +79,7 @@
     }
     button:active { opacity: 0.85; }
     button.secondary { background: var(--card); color: var(--accent); border: 1px solid var(--border); }
+    .icon-btn { display: flex; align-items: center; justify-content: center; padding: 0 0.85rem; }
 
     #map-card { padding: 0; overflow: hidden; position: relative; }
     #map { height: 260px; }
@@ -95,7 +96,6 @@
       width: auto;
       height: auto;
       padding: 0.2rem;
-      font-size: 1.5rem;
       line-height: 1;
       display: flex;
       align-items: center;
@@ -106,16 +106,17 @@
       cursor: pointer;
       white-space: nowrap;
     }
+    .sum-heart svg { width: 26px; height: 26px; }
     .sum-heart.saved { color: var(--moon-lit); }
 
     .faves { list-style: none; margin: 0; padding: 0; }
     .faves li { display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0; border-bottom: 1px solid var(--grid); }
     .faves li:last-child { border-bottom: 0; }
-    .faves li.fave-empty { color: var(--muted); border-bottom: 0; }
     .fave-go { flex: 1; text-align: left; background: none; border: none; color: var(--fg); padding: 0; display: flex; flex-direction: column; }
     .fave-name { font-weight: 600; }
     .fave-sub { font-size: 0.8rem; color: var(--muted); }
-    .fave-rename, .fave-remove { background: none; border: none; color: var(--muted); font-size: 1.1rem; padding: 0.2rem 0.3rem; cursor: pointer; }
+    .fave-rename, .fave-remove { display: flex; align-items: center; background: none; border: none; color: var(--muted); padding: 0.2rem 0.3rem; cursor: pointer; }
+    .fave-rename svg, .fave-remove svg { width: 18px; height: 18px; }
     .fave-remove.saved { color: var(--moon-lit); }
     .fave-input { flex: 1; font-size: 1rem; padding: 0.3rem 0.5rem; border: 1px solid var(--accent); border-radius: 6px; background: var(--card); color: var(--fg); }
 
@@ -213,13 +214,21 @@
     <form id="search" role="search">
       <input id="q" type="search" inputmode="search" enterkeyhint="search" autocomplete="off"
              placeholder="Place name, or 53.27, -9.05" aria-label="Place name or coordinates" />
-      <button type="submit" class="visually-hidden">Search</button>
+      <button type="submit" id="q-go" class="icon-btn" aria-label="Search" title="Search">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+          <path fill="currentColor" d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z"/>
+        </svg>
+      </button>
       <button type="button" id="map-toggle" class="secondary" aria-expanded="false">Map</button>
     </form>
 
     <div id="map-card" class="card hidden">
       <div id="map" aria-label="Map"></div>
-      <button id="locate" class="locate" type="button" title="Go to my location">📍</button>
+      <button id="locate" class="locate" type="button" title="Go to my location" aria-label="Go to my location">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+          <path fill="currentColor" d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm8.94 3A8.99 8.99 0 0 0 13 3.06V1h-2v2.06A8.99 8.99 0 0 0 3.06 11H1v2h2.06A8.99 8.99 0 0 0 11 20.94V23h2v-2.06A8.99 8.99 0 0 0 20.94 13H23v-2h-2.06zM12 19a7 7 0 1 1 0-14 7 7 0 0 1 0 14z"/>
+        </svg>
+      </button>
       <p class="muted">Tap the coast to get the tide there. Map data © OpenStreetMap contributors.</p>
     </div>
 
@@ -231,7 +240,7 @@
             <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
               <path fill="currentColor" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
             </svg>
-            <span>Map</span>
+            <span>Show on map</span>
           </button>
         </div>
         <button id="sum-heart" class="sum-heart" type="button" aria-label="Save to favourites" hidden>♡</button>
@@ -268,7 +277,7 @@
 
     <div id="choices" class="choices hidden" aria-label="Matching places"></div>
 
-    <div id="favourites-card" class="card">
+    <div id="favourites-card" class="card hidden">
       <h2>Favourites</h2>
       <ul id="favourites-list" class="faves"></ul>
     </div>
