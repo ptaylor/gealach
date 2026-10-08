@@ -549,7 +549,51 @@ function render() {
     `fetched ${fmtDayTime(r.fetchedAt, zone)} (${zoneAbbr}, ${zoneOffset})`;
 
   renderHeart();
+
+  // A point the source cannot predict: say so in a sentence rather than draw
+  // an empty chart with no turns on it.
+  if (!hasTideData(r)) {
+    $("summary").classList.add("hidden");
+    renderNoData(r);
+    return;
+  }
+  $("no-data").classList.add("hidden");
   renderSummary();
+}
+
+/** Whether the result carries any usable tide series for the display window. */
+function hasTideData(r) {
+  const series = activeSeries(r);
+  if (!Array.isArray(series) || !series.length) return false;
+  // The curve is drawn for now-2h .. now+12h; a series that stops before that
+  // can only produce an empty chart, so treat it as no data.
+  const nowMs = Date.now();
+  const from = nowMs - 2 * 3600000;
+  const to = nowMs + 12 * 3600000;
+  return series.some((p) => {
+    if (p.height == null) return false;
+    const t = Date.parse(p.time);
+    return t >= from && t <= to;
+  });
+}
+
+// The plain "we cannot predict here" card, shown instead of the summary when a
+// source returns no points for the point asked about.
+function renderNoData(r) {
+  const card = $("no-data");
+  const body = $("no-data-body");
+  const where = placeLabel ? escapeHtml(placeLabel) : "this point";
+
+  if (r.kind === "global-model") {
+    body.innerHTML =
+      `The global model (Open-Meteo Marine) has no sea-level series for ${where} ` +
+      `in the next few days. It is a coarse model, and some coastal and enclosed ` +
+      `points fall outside it.`;
+  } else {
+    body.innerHTML =
+      `The prediction source has no data for ${where} in the next few days.`;
+  }
+  card.classList.remove("hidden");
 }
 
 function activeSeries(r) {
