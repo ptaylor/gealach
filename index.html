@@ -207,6 +207,18 @@
     .provenance { font-size: 0.85rem; }
     footer { margin-top: 1rem; font-size: 0.85rem; }
     footer .notice { color: var(--muted); border-top: 1px solid var(--border); padding-top: 0.6rem; }
+    .footer-quote { margin: 1rem 0 0; text-align: center; }
+    .footer-quote-link {
+      display: block;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-style: italic;
+      font-size: 0.95rem;
+      line-height: 1.35;
+      color: var(--moon-lit);
+      text-decoration: none;
+    }
+    .footer-quote-link:hover { text-decoration: underline; }
+    .footer-quote-cite { display: block; margin-top: 0.25rem; font-size: 0.75rem; font-style: normal; color: var(--muted); }
     .muted { color: var(--muted); }
     .hidden { display: none; }
     .visually-hidden {
@@ -379,6 +391,10 @@
       <p id="attribution" class="muted"></p>
       <p class="notice">Not for navigation. Predictions exclude storm surge. Modelled currents are model output, not observations.</p>
       <p class="notice">Usage is measured with GoatCounter — no cookies, no personal data.</p>
+      <blockquote class="footer-quote">
+        <a class="footer-quote-link" href="https://en.wikisource.org/wiki/The_Wanderings_of_Oisin_and_Other_Poems/The_Wanderings_of_Oisin" target="_blank" rel="noopener">&ldquo;And the moon goad the waters night and day&rdquo;</a>
+        <cite class="footer-quote-cite">W. B. Yeats, <i>The Wanderings of Oisin</i></cite>
+      </blockquote>
     </footer>
   </main>
 
