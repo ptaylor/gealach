@@ -119,7 +119,9 @@ export function nextTurns(extremes, now = new Date()) {
 export function rangeAnalysis(extremes, now = new Date()) {
   const series = rangeSeries(extremes);
   const basis = "range-inference";
-  if (series.length < 3) return { label: null, nextSpring: null, basis };
+  if (series.length < 3) {
+    return { label: null, nextSpring: null, nextNeap: null, basis };
+  }
 
   const nowMs = new Date(now).getTime();
   const WINDOW = 7 * DAY_MS;

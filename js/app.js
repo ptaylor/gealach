@@ -253,32 +253,31 @@ function geolocationError(err) {
 
 function resolvePoint(lat, lon) {
   placeMarker(lat, lon);
-  hideChoices();
-  $("result").classList.add("hidden");
-  setStatus("Fetching tides…");
   abort();
   namePoint(lat, lon);
 }
 
 async function namePoint(lat, lon) {
-  let label = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+  const coordLabel = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+  let tz = "UTC";
+  let label = `${coordLabel} (UTC shown)`;
   try {
-    const [tz, place] = await Promise.all([
+    const [tzInfo, place] = await Promise.all([
       timezoneAt({ latitude: lat, longitude: lon }, { signal: controller.signal }),
       reverseGeocode({ latitude: lat, longitude: lon }, { signal: controller.signal }).catch(() => null),
     ]);
-    setZone(tz.timezone);
+    tz = tzInfo.timezone;
     if (place && place.name) {
       label = place.name;
       if (place.state) label += `, ${place.state}`;
       else if (place.country) label += `, ${place.country}`;
+    } else {
+      label = coordLabel;
     }
   } catch {
-    setZone("UTC");
-    label += " (UTC shown)";
+    /* tz stays "UTC" and label keeps the "(UTC shown)" form */
   }
-  placeLabel = label;
-  await load({ latitude: lat, longitude: lon });
+  await loadPoint({ latitude: lat, longitude: lon }, { zone: tz, label });
 }
 
 // ---------------------------------------------------------------------------
@@ -364,11 +363,12 @@ async function choose(r, hide = false) {
       tz = "UTC";
     }
   }
-  setZone(tz);
-  placeLabel = `${r.name}, ${r.admin1 ?? r.country}`;
   if (hide) hideChoices();
   else showChoices(geoResults, r);
-  await load({ latitude: r.latitude, longitude: r.longitude });
+  await loadPoint(
+    { latitude: r.latitude, longitude: r.longitude },
+    { zone: tz, label: `${r.name}, ${r.admin1 ?? r.country}` },
+  );
 }
 
 async function load(point) {
@@ -421,6 +421,20 @@ async function load(point) {
   }
 }
 
+// Shared preamble for resolving a point: cancel any in-flight request, clear
+// the previous choices and result, apply the place's label and timezone, and
+// load. Callers that need the timezone before loading still call abort() first
+// (a second abort is harmless).
+function loadPoint(point, { zone: tz, label } = {}) {
+  abort();
+  hideChoices();
+  $("result").classList.add("hidden");
+  if (tz) setZone(tz);
+  if (label != null) placeLabel = label;
+  setStatus("Fetching tides…");
+  return load(point);
+}
+
 function abort() {
   if (controller) controller.abort();
   controller = new AbortController();
@@ -450,6 +464,11 @@ function activeSeries(r) {
   return datumChoice === "ODM" && r.seriesODM && r.seriesODM.length
     ? r.seriesODM
     : r.series;
+}
+
+/** Whether the result carries an OD Malin series alongside the primary datum. */
+function hasODMSeries(r) {
+  return Array.isArray(r.seriesODM) && r.seriesODM.length > 0;
 }
 
 function renderSurge() {
@@ -710,13 +729,20 @@ function renderHeart() {
   btn.setAttribute("aria-label", saved ? "Remove from favourites" : "Save to favourites");
 }
 
+function removeFavourite(id) {
+  favourites = favourites.filter((f) => f.id !== id);
+  trackEvent("favourite-remove");
+  persistFavourites();
+  renderFavourites();
+  renderHeart();
+}
+
 function toggleFavourite() {
   if (!currentPoint) return;
   const id = heartKey(currentPoint);
   const existing = favourites.find((f) => f.id === id);
   if (existing) {
-    favourites = favourites.filter((f) => f.id !== id);
-    trackEvent("favourite-remove");
+    removeFavourite(id);
   } else {
     favourites.push({
       id,
@@ -726,10 +752,10 @@ function toggleFavourite() {
       timezone: zone,
     });
     trackEvent("favourite-add");
+    persistFavourites();
+    renderFavourites();
+    renderHeart();
   }
-  persistFavourites();
-  renderFavourites();
-  renderHeart();
 }
 
 function renderFavourites() {
@@ -773,13 +799,7 @@ function renderFavourites() {
     remove.textContent = "♥";
     remove.title = "Remove";
     remove.setAttribute("aria-label", `Remove ${f.name}`);
-    remove.addEventListener("click", () => {
-      favourites = favourites.filter((x) => x.id !== f.id);
-      trackEvent("favourite-remove");
-      persistFavourites();
-      renderFavourites();
-      renderHeart();
-    });
+    remove.addEventListener("click", () => removeFavourite(f.id));
 
     li.append(go, rename, remove);
     list.appendChild(li);
@@ -815,13 +835,10 @@ function beginRename(li, f) {
 
 function goFavourite(f) {
   trackEvent("favourite-open");
-  abort();
-  hideChoices();
-  $("result").classList.add("hidden");
-  setZone(f.timezone || "UTC");
-  placeLabel = f.name;
-  setStatus("Fetching tides…");
-  load({ latitude: f.latitude, longitude: f.longitude });
+  loadPoint(
+    { latitude: f.latitude, longitude: f.longitude },
+    { zone: f.timezone || "UTC", label: f.name },
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -894,7 +911,7 @@ function renderSummary() {
   const turns = nextTurns(r.extremes, now);
   drawSummaryCurve(series, now, turns);
 
-  const hasODM = Array.isArray(r.seriesODM) && r.seriesODM.length > 0;
+  const hasODM = hasODMSeries(r);
   $("sum-high").textContent = summaryTurnText("High", turns.nextHigh, hasODM);
   $("sum-low").textContent = summaryTurnText("Low", turns.nextLow, hasODM);
 }
@@ -1033,6 +1050,8 @@ function renderTideBlock() {
   }
 
   const series = activeSeries(r);
+  const hasODM = hasODMSeries(r);
+  const useODM = datumChoice === "ODM" && hasODM;
   const st = tideStateAt(series, now);
   let arrow = "";
   let stateText = "";
@@ -1047,9 +1066,11 @@ function renderTideBlock() {
   const turns = nextTurns(r.extremes, now);
   let rangeLine = "";
   if (turns.nextHigh && turns.nextLow) {
-    const hh = turns.nextHigh.heightODM ?? turns.nextHigh.height;
-    const hl = turns.nextLow.heightODM ?? turns.nextLow.height;
-    rangeLine = `Predicted range: ${m(Math.abs(hh - hl))} m`;
+    const hh = useODM ? turns.nextHigh.heightODM ?? turns.nextHigh.height : turns.nextHigh.height;
+    const hl = useODM ? turns.nextLow.heightODM ?? turns.nextLow.height : turns.nextLow.height;
+    if (hh != null && hl != null) {
+      rangeLine = `Predicted range: ${m(Math.abs(hh - hl))} m`;
+    }
   }
 
   let surge = "";
@@ -1059,7 +1080,6 @@ function renderTideBlock() {
       `<div class="muted">Observed at ${fmtDayTime(latest.time, zone)}: tide <strong>${m(latest.tide)} m</strong> · surge <strong>${m(latest.surge)} m</strong> — the prediction above excludes this surge.</div>`;
   }
 
-  const hasODM = Array.isArray(r.seriesODM) && r.seriesODM.length > 0;
   let datumHtml = `Datum ${escapeHtml(r.datum)}`;
   if (hasODM) {
     const shown = datumChoice === "LAT" ? "LAT (chart datum)" : "OD Malin";
@@ -1125,8 +1145,7 @@ async function setSource(source) {
   sourceChoice = source;
   trackEvent(source === "marine-ie" ? "switch-marine" : "switch-openmeteo");
   if (!currentPoint) return;
-  abort();
-  await load(currentPoint);
+  await loadPoint(currentPoint);
   openDetails();
 }
 
@@ -1174,6 +1193,15 @@ function renderCurrentRose(now) {
   $("sum-current-speed").textContent = `${c.speed.toFixed(1)} m/s`;
 }
 
+// "now" / "N min ago" / "in N min" for the nearest modelled reading.
+function currentOffsetText(c, now) {
+  const sign = Date.parse(c.time) >= now.getTime() ? 1 : -1;
+  const minutes =
+    c.minutesOffset ?? Math.round(Math.abs(Date.parse(c.time) - now.getTime()) / 60000);
+  if (minutes < 1) return "now";
+  return sign > 0 ? `in ${minutes} min` : `${minutes} min ago`;
+}
+
 function renderCurrentBlock() {
   const now = new Date();
   const currents = currentResult && currentResult.currents;
@@ -1190,7 +1218,7 @@ function renderCurrentBlock() {
     `<div><div class="dt-cur-speed">${c.speed.toFixed(1)} m/s</div>` +
     `<div class="muted">${compassPoint(c.direction)} (${Math.round(c.direction)}°, heading towards)</div></div>` +
     `</div>` +
-    `<div class="muted">Open-Meteo Marine, ~8 km grid, at ${fmtClock(c.time, zone)} — model output, not suitable for coastal navigation.</div>`;
+    `<div class="muted">Open-Meteo Marine, ~8 km grid, at ${fmtClock(c.time, zone)} (${currentOffsetText(c, now)}) — model output, not suitable for coastal navigation.</div>`;
 }
 
 /** A compass rose with an arrow pointing the way the water is heading. */

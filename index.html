@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0b6bcb" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)" />
   <meta name="description" content="What the sea is doing at a coastal place: tide height and state now, the next high and low, the range, and the modelled current." />
-  <meta name="version" content="v0.6" />
+  <meta name="version" content="v0.7" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
   <link rel="icon" href="icons/icon-192.png" type="image/png" sizes="192x192" />
@@ -86,17 +86,27 @@
     .locate { position: absolute; top: 10px; right: 10px; z-index: 1000; background: var(--card); border: 1px solid var(--border); border-radius: 8px; font-size: 1.1rem; line-height: 1; padding: 0.45rem 0.6rem; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,.25); }
     .locate:disabled { opacity: 0.6; cursor: default; }
 
-    .moon-row { display: flex; align-items: center; gap: 0.9rem; }
-    .moon-name { font-size: 1.15rem; font-weight: 600; }
-    .sum-indicators { display: flex; align-items: center; justify-content: center; gap: 2.2rem; margin: 0.7rem 0 1rem; }
+    .sum-indicators { display: flex; align-items: center; justify-content: center; gap: 4rem; margin: 0.7rem 0 1rem; }
     .sum-current { display: flex; align-items: center; gap: 0.25rem; }
     .sum-current-speed { font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 
-    .where-row { display: flex; align-items: flex-start; gap: 0.6rem; }
-    .where-row #where-text { flex: 1; }
-    .heart { flex: none; background: var(--card); border: 1px solid var(--border); border-radius: 999px; font-size: 1.15rem; line-height: 1; color: var(--moon-lit); padding: 0.45rem 0.75rem; cursor: pointer; white-space: nowrap; }
-    .heart.saved { color: var(--moon-lit); border-color: var(--moon-lit); }
-    .sum-heart { width: 40px; height: 40px; padding: 0; font-size: 1.3rem; display: flex; align-items: center; justify-content: center; border-radius: 999px; }
+    .sum-heart {
+      flex: none;
+      width: auto;
+      height: auto;
+      padding: 0.2rem;
+      font-size: 1.5rem;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      background: none;
+      border: 0;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .sum-heart.saved { color: var(--moon-lit); }
 
     .faves { list-style: none; margin: 0; padding: 0; }
     .faves li { display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0; border-bottom: 1px solid var(--grid); }
@@ -128,22 +138,6 @@
     }
     .card h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0 0 0.5rem; }
 
-    .now { text-align: center; }
-    .datum-row { display: flex; justify-content: center; gap: 0.5rem; align-items: baseline; flex-wrap: wrap; }
-    .datum-row .dat { color: var(--muted); font-size: 0.85rem; }
-    .big { font-size: 4.2rem; font-weight: 700; line-height: 1.05; font-variant-numeric: tabular-nums; }
-    .big .unit { font-size: 1.4rem; font-weight: 400; color: var(--muted); }
-    .state { font-size: 1.1rem; margin-top: 0.2rem; }
-    .state .rising { color: var(--accent); }
-    .state .falling { color: var(--warn); }
-
-    .turn-row { display: flex; justify-content: space-between; padding: 0.35rem 0; border-bottom: 1px solid var(--grid); }
-    .turn-row:last-child { border-bottom: 0; }
-    .turn-row .kind { color: var(--muted); }
-    .turn-row .time { font-variant-numeric: tabular-nums; }
-    .turn-row .height { font-variant-numeric: tabular-nums; font-weight: 600; }
-
-    svg#curve { width: 100%; height: auto; display: block; }
     .curve-line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; }
     .curve-now { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
     .curve-label { fill: var(--muted); font-size: 10px; }
@@ -159,7 +153,6 @@
     .sum-turns { display: flex; justify-content: space-between; gap: 1rem; margin-top: 0.2rem; }
     .sum-turn { font-size: 0.95rem; font-variant-numeric: tabular-nums; }
 
-    .current-big { font-size: 2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
     .provenance { font-size: 0.85rem; }
     footer { margin-top: 1rem; font-size: 0.85rem; }
     footer .notice { color: var(--muted); border-top: 1px solid var(--border); padding-top: 0.6rem; }
@@ -197,7 +190,7 @@
     .source-switch button.selected { color: var(--accent); border-color: var(--accent); }
     .source-switch button:disabled { opacity: 0.45; cursor: default; }
     .details-block { padding-top: 0.6rem; margin-top: 0.6rem; border-top: 1px solid var(--border); font-size: 0.95rem; }
-    #details h2 { font-size: 1rem; }
+    #details h2 { font-size: 1rem; color: var(--accent); }
     .details-block.hidden { display: none; }
     .dt-state { display: flex; align-items: center; gap: 0.7rem; margin: 0.4rem 0; font-weight: 600; }
     .dt-arrow { width: 15px; height: 45px; flex: none; }
@@ -241,15 +234,15 @@
             <span>Map</span>
           </button>
         </div>
-        <button id="sum-heart" class="heart sum-heart" type="button" aria-label="Save to favourites" hidden>♡</button>
+        <button id="sum-heart" class="sum-heart" type="button" aria-label="Save to favourites" hidden>♡</button>
       </div>
       <div class="sum-indicators">
+        <div class="sum-moon">
+          <svg id="sum-moon-glyph" viewBox="0 0 64 64" width="40" height="40" aria-hidden="true"></svg>
+        </div>
         <div id="sum-current" class="sum-current" hidden>
           <svg id="sum-current-rose" viewBox="0 0 34 34" width="40" height="40" aria-hidden="true"></svg>
           <span id="sum-current-speed" class="sum-current-speed"></span>
-        </div>
-        <div class="sum-moon">
-          <svg id="sum-moon-glyph" viewBox="0 0 64 64" width="40" height="40" aria-hidden="true"></svg>
         </div>
       </div>
       <svg id="sum-curve" viewBox="0 0 360 150" role="img" aria-label="Tide curve"></svg>
@@ -267,8 +260,8 @@
           <button type="button" data-source="open-meteo">Open-Meteo</button>
         </div>
         <div id="details-tide" class="details-block"></div>
-        <div id="details-moon" class="details-block"></div>
         <div id="details-current" class="details-block"></div>
+        <div id="details-moon" class="details-block"></div>
       </div>
     </section>
 
