@@ -52,6 +52,71 @@ function distanceBandEvent(r) {
   return "distance-global";
 }
 
+// ---------------------------------------------------------------------------
+// colour theme
+//
+// The palette follows the device by default (prefers-color-scheme). The reader
+// can override it to light or dark; the choice is kept in localStorage and
+// applied as data-theme on <html>, which wins over the media query. "system"
+// (the default) removes the attribute and lets the device decide.
+
+const THEME_KEY = "gealach-theme";
+const THEME_CYCLE = ["system", "light", "dark"];
+
+function initTheme() {
+  applyTheme(getStoredTheme());
+}
+
+function getStoredTheme() {
+  try {
+    const v = localStorage.getItem(THEME_KEY);
+    return THEME_CYCLE.includes(v) ? v : "system";
+  } catch {
+    return "system";
+  }
+}
+
+function cycleTheme() {
+  const next = THEME_CYCLE[(THEME_CYCLE.indexOf(getStoredTheme()) + 1) % THEME_CYCLE.length];
+  try {
+    if (next === "system") localStorage.removeItem(THEME_KEY);
+    else localStorage.setItem(THEME_KEY, next);
+  } catch {
+    /* storage unavailable — the choice just is not persisted */
+  }
+  applyTheme(next);
+  trackEvent(`theme-${next}`);
+}
+
+function applyTheme(theme) {
+  const root = document.documentElement;
+  if (theme === "system") root.removeAttribute("data-theme");
+  else root.setAttribute("data-theme", theme);
+
+  const btn = document.querySelector("#theme-toggle");
+  if (btn) {
+    btn.setAttribute("data-theme", theme);
+    btn.setAttribute("aria-label", `Colour theme: ${theme}`);
+    btn.title = `Colour theme: ${theme}`;
+  }
+  updateThemeColorMeta();
+}
+
+// The status-bar / browser-chrome tint has one meta per scheme, chosen by the
+// media attribute. When the reader forces a scheme, collapse them to a single
+// meta whose content matches what is actually on screen.
+function updateThemeColorMeta() {
+  const explicit = document.documentElement.getAttribute("data-theme");
+  const dark = explicit
+    ? explicit === "dark"
+    : matchMedia("(prefers-color-scheme: dark)").matches;
+  const metas = [...document.querySelectorAll('meta[name="theme-color"]')];
+  if (!metas.length) return;
+  metas[0].setAttribute("content", dark ? "#0f1115" : "#0b6bcb");
+  metas[0].removeAttribute("media");
+  for (const extra of metas.slice(1)) extra.remove();
+}
+
 const ATTRIBUTION =
   "Data: Marine Institute (CC-BY 4.0) · Open-Meteo & GeoNames (CC-BY 4.0) · NOAA · OpenStreetMap (ODbL).";
 
@@ -77,6 +142,8 @@ const FAVOURITES_KEY = "gealach-favourites";
 init();
 
 async function init() {
+  initTheme();
+  $("theme-toggle").addEventListener("click", cycleTheme);
   $("search").addEventListener("submit", onSubmit);
   // iOS fires a `search` event on a type=search input instead of submitting the
   // form; route it through the same path so the keyboard search key works there.
@@ -299,6 +366,7 @@ async function onSubmit(e) {
   abort();
   hideChoices();
   $("result").classList.add("hidden");
+  setSearchError("");
   setStatus(`Looking up “${q}”…`);
 
   const coord = q.match(/^\s*([-+]?\d+(?:\.\d+)?)\s*,\s*([-+]?\d+(?:\.\d+)?)\s*$/);
@@ -321,11 +389,13 @@ async function onSubmit(e) {
   } catch (err) {
     if (err.name === "AbortError") return;
     trackEvent("error-geocode");
-    setStatus(`Could not look up “${q}”: ${err.message}`);
+    setStatus("");
+    setSearchError(`Could not look up “${q}”: ${err.message}`);
     return;
   }
   if (!geo.results.length) {
-    setStatus(`No place found for “${q}”.`);
+    setStatus("");
+    setSearchError(`No place found for “${q}”.`);
     return;
   }
   // Prefer Ireland, but show the alternatives rather than silently choosing.
@@ -348,10 +418,13 @@ async function onSubmit(e) {
   if (results.length > 1) trackEvent("geocode-ambiguous");
   const def = results.find((r) => r.countryCode === "IE") || results[0];
   showChoices(results, def);
-  await choose(def);
+  // First result chosen automatically, but keep the alternatives on screen so
+  // the reader can pick a different match (requirement: show the alternatives
+  // rather than silently choosing).
+  await choose(def, { keepChoices: true });
 }
 
-async function choose(r, hide = false) {
+async function choose(r, { fromChip = false, keepChoices = false } = {}) {
   abort();
   let tz = r.timezone || "UTC";
   if (!r.timezone) {
@@ -363,11 +436,11 @@ async function choose(r, hide = false) {
       tz = "UTC";
     }
   }
-  if (hide) hideChoices();
+  if (fromChip) hideChoices();
   else showChoices(geoResults, r);
   await loadPoint(
     { latitude: r.latitude, longitude: r.longitude },
-    { zone: tz, label: `${r.name}, ${r.admin1 ?? r.country}` },
+    { zone: tz, label: `${r.name}, ${r.admin1 ?? r.country}`, keepChoices },
   );
 }
 
@@ -425,10 +498,14 @@ async function load(point) {
 // the previous choices and result, apply the place's label and timezone, and
 // load. Callers that need the timezone before loading still call abort() first
 // (a second abort is harmless).
-function loadPoint(point, { zone: tz, label } = {}) {
+function loadPoint(point, { zone: tz, label, keepChoices = false } = {}) {
   abort();
-  hideChoices();
+  // Keep the alternatives list on screen when the load came from a name
+  // search; a map pick, a geolocate or a favourite open replaces the location
+  // entirely, so those clear it.
+  if (!keepChoices) hideChoices();
   $("result").classList.add("hidden");
+  setSearchError("");
   if (tz) setZone(tz);
   if (label != null) placeLabel = label;
   setStatus("Fetching tides…");
@@ -448,6 +525,21 @@ function render() {
   const now = new Date();
   $("result").classList.remove("hidden");
 
+  // Situational caveat, up front: a prediction from far away (or from the
+  // global model) is not a prediction for here (requirements 3 and 10).
+  const warnEl = $("proximity-warning");
+  if (r.kind === "global-model") {
+    warnEl.textContent =
+      "Outside the Irish prediction stations — showing the global model (Open-Meteo).";
+    warnEl.classList.remove("hidden");
+  } else if (r.distanceKm != null && r.distanceKm > MAX_STATION_DISTANCE_KM) {
+    warnEl.textContent = `Nearest prediction station is ${km(r.distanceKm)} away — this is not a prediction for here.`;
+    warnEl.classList.remove("hidden");
+  } else {
+    warnEl.textContent = "";
+    warnEl.classList.add("hidden");
+  }
+
   // Surge
   renderSurge();
 
@@ -457,7 +549,51 @@ function render() {
     `fetched ${fmtDayTime(r.fetchedAt, zone)} (${zoneAbbr}, ${zoneOffset})`;
 
   renderHeart();
+
+  // A point the source cannot predict: say so in a sentence rather than draw
+  // an empty chart with no turns on it.
+  if (!hasTideData(r)) {
+    $("summary").classList.add("hidden");
+    renderNoData(r);
+    return;
+  }
+  $("no-data").classList.add("hidden");
   renderSummary();
+}
+
+/** Whether the result carries any usable tide series for the display window. */
+function hasTideData(r) {
+  const series = activeSeries(r);
+  if (!Array.isArray(series) || !series.length) return false;
+  // The curve is drawn for now-2h .. now+12h; a series that stops before that
+  // can only produce an empty chart, so treat it as no data.
+  const nowMs = Date.now();
+  const from = nowMs - 2 * 3600000;
+  const to = nowMs + 12 * 3600000;
+  return series.some((p) => {
+    if (p.height == null) return false;
+    const t = Date.parse(p.time);
+    return t >= from && t <= to;
+  });
+}
+
+// The plain "we cannot predict here" card, shown instead of the summary when a
+// source returns no points for the point asked about.
+function renderNoData(r) {
+  const card = $("no-data");
+  const body = $("no-data-body");
+  const where = placeLabel ? escapeHtml(placeLabel) : "this point";
+
+  if (r.kind === "global-model") {
+    body.innerHTML =
+      `The global model (Open-Meteo Marine) has no sea-level series for ${where} ` +
+      `in the next few days. It is a coarse model, and some coastal and enclosed ` +
+      `points fall outside it.`;
+  } else {
+    body.innerHTML =
+      `The prediction source has no data for ${where} in the next few days.`;
+  }
+  card.classList.remove("hidden");
 }
 
 function activeSeries(r) {
@@ -498,7 +634,7 @@ function showChoices(results, picked) {
     b.type = "button";
     b.textContent = `${r.name}, ${r.admin1 ?? r.country} (${r.countryCode})`;
     if (r === picked) b.classList.add("picked");
-    b.addEventListener("click", () => choose(r, true));
+    b.addEventListener("click", () => choose(r, { fromChip: true }));
     box.appendChild(b);
   }
   box.classList.remove("hidden");
@@ -529,6 +665,19 @@ function setStatus(msg) {
     el.textContent = msg;
     el.classList.remove("hidden");
   } else {
+    el.classList.add("hidden");
+  }
+}
+
+// A message directly under the search bar, for a search that cannot be
+// answered at all (a place that does not exist, a geocoder that is down).
+function setSearchError(msg) {
+  const el = $("search-error");
+  if (msg) {
+    el.textContent = msg;
+    el.classList.remove("hidden");
+  } else {
+    el.textContent = "";
     el.classList.add("hidden");
   }
 }
@@ -724,9 +873,23 @@ function renderHeart() {
   }
   btn.hidden = false;
   const saved = isFavourited(currentPoint);
-  btn.textContent = saved ? "♥" : "♡";
+  btn.innerHTML = iconSvg(saved ? "heart-filled" : "heart");
   btn.classList.toggle("saved", saved);
   btn.setAttribute("aria-label", saved ? "Remove from favourites" : "Save to favourites");
+}
+
+// Small inline SVG icons, so the UI does not depend on emoji rendering (which
+// varies by platform and clashes with the crisp inline SVGs used elsewhere).
+function iconSvg(name) {
+  const paths = {
+    heart:
+      `<path fill="none" stroke="currentColor" stroke-width="2" d="M12 20.3l-1.45-1.32C5.4 14.24 2 11.16 2 7.4A5.4 5.4 0 0 1 7.4 2c1.74 0 3.41.81 4.6 2.09A6.02 6.02 0 0 1 16.6 2 5.4 5.4 0 0 1 22 7.4c0 3.76-3.4 6.84-8.55 11.59z"/>`,
+    "heart-filled":
+      `<path fill="currentColor" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09A5.99 5.99 0 0 1 16.5 3C19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54z"/>`,
+    pencil:
+      `<path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>`,
+  };
+  return `<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">${paths[name] ?? ""}</svg>`;
 }
 
 function removeFavourite(id) {
@@ -760,14 +923,14 @@ function toggleFavourite() {
 
 function renderFavourites() {
   const list = $("favourites-list");
+  const card = $("favourites-card");
   list.innerHTML = "";
+  // Before anything is saved the card is pure noise — fold it away entirely.
   if (!favourites.length) {
-    const li = document.createElement("li");
-    li.className = "fave-empty";
-    li.textContent = "No favourites yet — search for a place, then tap ♡.";
-    list.appendChild(li);
+    card.classList.add("hidden");
     return;
   }
+  card.classList.remove("hidden");
 
   for (const f of favourites) {
     const li = document.createElement("li");
@@ -788,7 +951,7 @@ function renderFavourites() {
     const rename = document.createElement("button");
     rename.type = "button";
     rename.className = "fave-rename";
-    rename.textContent = "✎";
+    rename.innerHTML = iconSvg("pencil");
     rename.title = "Rename";
     rename.setAttribute("aria-label", `Rename ${f.name}`);
     rename.addEventListener("click", () => beginRename(li, f));
@@ -796,7 +959,7 @@ function renderFavourites() {
     const remove = document.createElement("button");
     remove.type = "button";
     remove.className = "fave-remove saved";
-    remove.textContent = "♥";
+    remove.innerHTML = iconSvg("heart-filled");
     remove.title = "Remove";
     remove.setAttribute("aria-label", `Remove ${f.name}`);
     remove.addEventListener("click", () => removeFavourite(f.id));
@@ -912,8 +1075,25 @@ function renderSummary() {
   drawSummaryCurve(series, now, turns);
 
   const hasODM = hasODMSeries(r);
-  $("sum-high").textContent = summaryTurnText("High", turns.nextHigh, hasODM);
-  $("sum-low").textContent = summaryTurnText("Low", turns.nextLow, hasODM);
+  // Show the turns in the order they happen, so the next one is always on the
+  // left whichever it is. A missing turn keeps its slot as a placeholder so the
+  // row stays balanced.
+  const turnBlocks = [
+    { label: "High", turn: turns.nextHigh },
+    { label: "Low", turn: turns.nextLow },
+  ]
+    .sort((a, b) => {
+      const am = a.turn ? a.turn.minutesTo : Infinity;
+      const bm = b.turn ? b.turn.minutesTo : Infinity;
+      return am - bm;
+    })
+    .map((b) => {
+      const el = document.createElement("div");
+      el.className = "sum-turn";
+      el.textContent = summaryTurnText(b.label, b.turn, hasODM);
+      return el;
+    });
+  $("sum-turns").replaceChildren(...turnBlocks);
 }
 
 function summaryTurnText(label, t, hasODM) {
@@ -942,7 +1122,7 @@ function drawSummaryCurve(series, now, turns) {
   const W = 360;
   const H = 150;
   const padTop = 16;
-  const padBottom = 26;
+  const padBottom = 12;
   const padLeft = 8;
   const padRight = 8;
   const nowMs = now.getTime();
@@ -957,6 +1137,7 @@ function drawSummaryCurve(series, now, turns) {
   if (win.length < 2) {
     svg.innerHTML =
       `<text class="curve-label" x="180" y="75" text-anchor="middle">No tide data for this window</text>`;
+    $("sum-axis").innerHTML = "";
     return;
   }
 
@@ -990,6 +1171,12 @@ function drawSummaryCurve(series, now, turns) {
   inner += `<line class="curve-now" x1="${nowX.toFixed(1)}" y1="${padTop}" x2="${nowX.toFixed(1)}" y2="${H - padBottom}" />`;
   inner += `<text class="curve-label" x="${nowX.toFixed(1)}" y="${padTop - 4}" text-anchor="middle">NOW</text>`;
 
+  // The current height on the NOW line, so the picture and the headline agree.
+  const nowH = seriesHeightAt(series, nowMs);
+  if (nowH != null) {
+    inner += `<circle cx="${nowX.toFixed(1)}" cy="${y(nowH).toFixed(1)}" r="3.5" fill="var(--card)" stroke="var(--accent)" stroke-width="2" />`;
+  }
+
   for (const [letter, turn] of [["H", turns.nextHigh], ["L", turns.nextLow]]) {
     if (!turn) continue;
     const tm = Date.parse(turn.time);
@@ -999,13 +1186,17 @@ function drawSummaryCurve(series, now, turns) {
     const mx = x(tm);
     const my = y(h);
     inner += `<circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="4" fill="var(--accent)" stroke="var(--card)" stroke-width="1.5" />`;
-    inner += `<text class="curve-label" x="${mx.toFixed(1)}" y="${my - 8}" text-anchor="middle">${letter}</text>`;
+    inner += `<text class="curve-label" x="${mx.toFixed(1)}" y="${my - 8}" text-anchor="middle">${letter} ${fmtClock(turn.time, zone)}</text>`;
   }
 
-  inner += `<text class="curve-label" x="${padLeft}" y="${H - 8}" text-anchor="start">${fmtClock(iso(new Date(from)), zone)}</text>`;
-  inner += `<text class="curve-label" x="${W - padRight}" y="${H - 8}" text-anchor="end">${fmtClock(iso(new Date(to)), zone)}</text>`;
-
   svg.innerHTML = inner;
+
+  // Values under the curve: the window's start/end clocks, and the height now.
+  const axis = $("sum-axis");
+  axis.innerHTML =
+    `<span>${fmtClock(iso(new Date(from)), zone)}</span>` +
+    (nowH != null ? `<span>now ${m(nowH)} m</span>` : "") +
+    `<span>${fmtClock(iso(new Date(to)), zone)}</span>`;
 }
 
 // ---------------------------------------------------------------------------
@@ -1024,12 +1215,8 @@ function renderTideBlock() {
     r.kind === "global-model" ? "global model" :
     r.kind === "model" ? "model" : "prediction station";
 
-  let warn = "";
-  if (r.kind === "global-model") {
-    warn = `<div class="dt-warn">Outside the Irish prediction stations — showing the global model (Open-Meteo).</div>`;
-  } else if (r.distanceKm != null && r.distanceKm > MAX_STATION_DISTANCE_KM) {
-    warn = `<div class="dt-warn">Nearest prediction station is ${km(r.distanceKm)} away — this is not a prediction for here.</div>`;
-  }
+  // The distance / global-model caveat is shown as a banner above the card
+  // (see render()), so it is not repeated here.
 
   const spring = rangeAnalysis(r.extremes, now);
   const label =
@@ -1094,13 +1281,11 @@ function renderTideBlock() {
     `<div class="muted">${escapeHtml(r.stationName)} — ${kindWord}` +
     (r.distanceKm != null ? ` · ${km(r.distanceKm)} from where you asked` : "") +
     `</div>` +
-    warn +
     `<div>Currently: <strong>${label}</strong> <span class="muted">(inferred from the predicted range)</span></div>` +
     nextLines.join("") +
     `<div class="dt-state"><svg class="dt-arrow" viewBox="0 0 32 96" aria-hidden="true">${arrow}</svg><span>${stateText}</span></div>` +
     `<div class="muted">${rangeLine}${rangeLine ? " · " : ""}station ${escapeHtml(r.station)} · ${datumHtml} · fetched ${fmtDayTime(r.fetchedAt, zone)}</div>` +
-    surge +
-    `<div class="muted">Not for navigation. Predictions exclude storm surge. Modelled currents are model output.</div>`;
+    surge;
 }
 
 function toggleDetails() {
