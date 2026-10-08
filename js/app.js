@@ -299,6 +299,7 @@ async function onSubmit(e) {
   abort();
   hideChoices();
   $("result").classList.add("hidden");
+  setSearchError("");
   setStatus(`Looking up “${q}”…`);
 
   const coord = q.match(/^\s*([-+]?\d+(?:\.\d+)?)\s*,\s*([-+]?\d+(?:\.\d+)?)\s*$/);
@@ -321,11 +322,13 @@ async function onSubmit(e) {
   } catch (err) {
     if (err.name === "AbortError") return;
     trackEvent("error-geocode");
-    setStatus(`Could not look up “${q}”: ${err.message}`);
+    setStatus("");
+    setSearchError(`Could not look up “${q}”: ${err.message}`);
     return;
   }
   if (!geo.results.length) {
-    setStatus(`No place found for “${q}”.`);
+    setStatus("");
+    setSearchError(`No place found for “${q}”.`);
     return;
   }
   // Prefer Ireland, but show the alternatives rather than silently choosing.
@@ -429,6 +432,7 @@ function loadPoint(point, { zone: tz, label } = {}) {
   abort();
   hideChoices();
   $("result").classList.add("hidden");
+  setSearchError("");
   if (tz) setZone(tz);
   if (label != null) placeLabel = label;
   setStatus("Fetching tides…");
@@ -544,6 +548,19 @@ function setStatus(msg) {
     el.textContent = msg;
     el.classList.remove("hidden");
   } else {
+    el.classList.add("hidden");
+  }
+}
+
+// A message directly under the search bar, for a search that cannot be
+// answered at all (a place that does not exist, a geocoder that is down).
+function setSearchError(msg) {
+  const el = $("search-error");
+  if (msg) {
+    el.textContent = msg;
+    el.classList.remove("hidden");
+  } else {
+    el.textContent = "";
     el.classList.add("hidden");
   }
 }

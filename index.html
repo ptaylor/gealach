@@ -128,6 +128,7 @@
     .choices button.picked { border-color: var(--accent); color: var(--accent); font-weight: 600; }
 
     .status { color: var(--muted); margin: 0.5rem 0; }
+    .search-error { color: var(--bad); margin: 0 0 0.6rem; font-weight: 600; }
     .warning {
       background: var(--warn-bg); color: var(--warn);
       border-radius: 10px; padding: 0.6rem 0.8rem; margin: 0.5rem 0; font-weight: 600;
@@ -221,6 +222,8 @@
       </button>
       <button type="button" id="map-toggle" class="secondary" aria-expanded="false">Map</button>
     </form>
+
+    <p id="search-error" class="search-error hidden" role="alert"></p>
 
     <div id="map-card" class="card hidden">
       <div id="map" aria-label="Map"></div>
