@@ -2,6 +2,9 @@
 
 # Gealach — tides
 
+> *"And the moon goad the waters night and day"*
+> — W. B. Yeats, [*The Wanderings of Oisin*](https://en.wikisource.org/wiki/The_Wanderings_of_Oisin_and_Other_Poems/The_Wanderings_of_Oisin) (1889)
+
 What the sea is doing at a coastal place, on a phone in a pocket: the tide's
 height and state now, when it turns, what the range is, whether we are on
 springs or neaps, and — where a model is available — which way the water is
