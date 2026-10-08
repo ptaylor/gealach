@@ -228,7 +228,18 @@
     .overlay-panel h2 { margin: 0 0 0.3rem; font-size: 1.4rem; }
     .info-icon { display: block; width: 56px; height: 56px; margin: 0 auto 0.5rem; }
     .info-version { color: var(--muted); margin-bottom: 0.5rem; }
-    .info-tagline { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.1rem; }
+    .info-quote { margin: 0 0 1.1rem; }
+    .info-quote-link {
+      display: block;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-style: italic;
+      font-size: 1.05rem;
+      line-height: 1.35;
+      color: var(--moon-lit);
+      text-decoration: none;
+    }
+    .info-quote-link:hover { text-decoration: underline; }
+    .info-quote-cite { display: block; margin-top: 0.3rem; font-size: 0.8rem; font-style: normal; color: var(--muted); }
     .info-link { display: block; color: var(--accent); margin-bottom: 1rem; }
     .info-close { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 0.5rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer; }
     .details-toggle { display: flex; align-items: center; justify-content: center; gap: 0.4rem; width: 100%; margin-top: 0.6rem; padding: 0.55rem; background: none; border: 1px solid var(--border); border-radius: 10px; color: var(--accent); font-size: 0.95rem; font-weight: 600; cursor: pointer; }
@@ -376,7 +387,10 @@
       <img src="icons/icon.svg" alt="" class="info-icon" />
       <h2 class="brand-name"><span class="t-geal">geal</span><span class="t-ach">ach</span></h2>
       <div class="info-version" id="info-version"></div>
-      <div class="info-tagline">Tides for a coastal place.</div>
+      <blockquote class="info-quote">
+        <a class="info-quote-link" href="https://en.wikisource.org/wiki/The_Wanderings_of_Oisin_and_Other_Poems/The_Wanderings_of_Oisin" target="_blank" rel="noopener">&ldquo;And the moon goad the waters night and day&rdquo;</a>
+        <cite class="info-quote-cite">W. B. Yeats, <i>The Wanderings of Oisin</i></cite>
+      </blockquote>
       <a class="info-link" href="https://github.com/ptaylor/gealach/issues/new?template=bug-report.md" target="_blank" rel="noopener">🐛 Report a bug</a>
       <a class="info-link" href="https://github.com/ptaylor/gealach/issues/new?template=data-inaccuracy.md" target="_blank" rel="noopener">⚠️ Report a data inaccuracy</a>
       <a class="info-link" href="https://github.com/ptaylor/gealach/issues/new?template=feature-request.md" target="_blank" rel="noopener">💡 Suggest a feature</a>
