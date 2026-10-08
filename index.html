@@ -140,8 +140,9 @@
 
     .curve-line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; }
     .curve-now { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
-    .curve-label { fill: var(--muted); font-size: 10px; }
-    .curve-fill { fill: var(--accent); opacity: 0.08; }
+    .curve-label { fill: var(--muted); font-size: 12px; }
+    .curve-fill { fill: var(--accent); opacity: 0.12; }
+    .sum-axis { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; margin-top: -0.35rem; }
 
     .sum-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.8rem; margin-bottom: 0.2rem; }
     .sum-name { font-size: 1.2rem; font-weight: 700; cursor: pointer; }
@@ -245,6 +246,7 @@
         </div>
       </div>
       <svg id="sum-curve" viewBox="0 0 360 150" role="img" aria-label="Tide curve"></svg>
+      <div id="sum-axis" class="sum-axis" aria-hidden="true"></div>
       <div class="sum-turns">
         <div class="sum-turn" id="sum-high"></div>
         <div class="sum-turn" id="sum-low"></div>

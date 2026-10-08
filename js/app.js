@@ -957,7 +957,7 @@ function drawSummaryCurve(series, now, turns) {
   const W = 360;
   const H = 150;
   const padTop = 16;
-  const padBottom = 26;
+  const padBottom = 12;
   const padLeft = 8;
   const padRight = 8;
   const nowMs = now.getTime();
@@ -972,6 +972,7 @@ function drawSummaryCurve(series, now, turns) {
   if (win.length < 2) {
     svg.innerHTML =
       `<text class="curve-label" x="180" y="75" text-anchor="middle">No tide data for this window</text>`;
+    $("sum-axis").innerHTML = "";
     return;
   }
 
@@ -1005,6 +1006,12 @@ function drawSummaryCurve(series, now, turns) {
   inner += `<line class="curve-now" x1="${nowX.toFixed(1)}" y1="${padTop}" x2="${nowX.toFixed(1)}" y2="${H - padBottom}" />`;
   inner += `<text class="curve-label" x="${nowX.toFixed(1)}" y="${padTop - 4}" text-anchor="middle">NOW</text>`;
 
+  // The current height on the NOW line, so the picture and the headline agree.
+  const nowH = seriesHeightAt(series, nowMs);
+  if (nowH != null) {
+    inner += `<circle cx="${nowX.toFixed(1)}" cy="${y(nowH).toFixed(1)}" r="3.5" fill="var(--card)" stroke="var(--accent)" stroke-width="2" />`;
+  }
+
   for (const [letter, turn] of [["H", turns.nextHigh], ["L", turns.nextLow]]) {
     if (!turn) continue;
     const tm = Date.parse(turn.time);
@@ -1014,13 +1021,17 @@ function drawSummaryCurve(series, now, turns) {
     const mx = x(tm);
     const my = y(h);
     inner += `<circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="4" fill="var(--accent)" stroke="var(--card)" stroke-width="1.5" />`;
-    inner += `<text class="curve-label" x="${mx.toFixed(1)}" y="${my - 8}" text-anchor="middle">${letter}</text>`;
+    inner += `<text class="curve-label" x="${mx.toFixed(1)}" y="${my - 8}" text-anchor="middle">${letter} ${fmtClock(turn.time, zone)}</text>`;
   }
 
-  inner += `<text class="curve-label" x="${padLeft}" y="${H - 8}" text-anchor="start">${fmtClock(iso(new Date(from)), zone)}</text>`;
-  inner += `<text class="curve-label" x="${W - padRight}" y="${H - 8}" text-anchor="end">${fmtClock(iso(new Date(to)), zone)}</text>`;
-
   svg.innerHTML = inner;
+
+  // Values under the curve: the window's start/end clocks, and the height now.
+  const axis = $("sum-axis");
+  axis.innerHTML =
+    `<span>${fmtClock(iso(new Date(from)), zone)}</span>` +
+    (nowH != null ? `<span>now ${m(nowH)} m</span>` : "") +
+    `<span>${fmtClock(iso(new Date(to)), zone)}</span>`;
 }
 
 // ---------------------------------------------------------------------------
