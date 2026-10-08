@@ -32,6 +32,9 @@
       --brand-silver: #b9c0cc;
       --brand-blue: #0b6bcb;
     }
+    /* Dark palette: applied when the system asks for it, or when the reader
+       has chosen dark explicitly. The explicit choice (html[data-theme]) comes
+       later in the cascade, so it wins. */
     @media (prefers-color-scheme: dark) {
       :root {
         --bg: #0f1115;
@@ -50,6 +53,39 @@
         --brand-blue: #5a9fe0;
       }
     }
+    html[data-theme="dark"] {
+      --bg: #0f1115;
+      --fg: #e7e9ee;
+      --muted: #9aa2ae;
+      --accent: #5aa7ff;
+      --card: #181b21;
+      --border: #2a303b;
+      --warn: #fbbf24;
+      --warn-bg: #3a2f10;
+      --ok: #4ade80;
+      --bad: #f87171;
+      --grid: #222834;
+      --moon: #3d4553;
+      --brand-silver: #c6ccd6;
+      --brand-blue: #5a9fe0;
+    }
+    html[data-theme="light"] {
+      --bg: #f5f6f8;
+      --fg: #1b1e24;
+      --muted: #5c6470;
+      --accent: #0b6bcb;
+      --card: #ffffff;
+      --border: #dde1e7;
+      --warn: #b45309;
+      --warn-bg: #fef3c7;
+      --ok: #166534;
+      --bad: #b91c1c;
+      --grid: #e8ecf1;
+      --moon: #d7dde5;
+      --moon-lit: #f0c75e;
+      --brand-silver: #b9c0cc;
+      --brand-blue: #0b6bcb;
+    }
     * { box-sizing: border-box; }
     html { -webkit-text-size-adjust: 100%; }
     body {
@@ -61,6 +97,18 @@
     }
     main { max-width: 34rem; margin: 0 auto; }
     header h1 { font-size: 2rem; margin: 0; line-height: 1; }
+    .theme-toggle {
+      position: absolute; top: calc(0.5rem + env(safe-area-inset-top)); right: 0;
+      background: none; border: 0; padding: 0.4rem; cursor: pointer;
+      color: var(--muted); line-height: 0;
+    }
+    /* Show only the glyph for the active state: system = half-filled circle,
+       light = sun, dark = moon. */
+    .theme-toggle .theme-icon { display: none; }
+    .theme-toggle[data-theme="system"] .theme-icon-system { display: block; }
+    .theme-toggle[data-theme="light"] .theme-icon-light { display: block; }
+    .theme-toggle[data-theme="dark"] .theme-icon-dark { display: block; }
+    header { position: relative; }
     .brand { display: flex; align-items: center; justify-content: center; gap: 0.6rem; margin: 0.5rem 0 1rem; }
     .brand-icon { width: 42px; height: 42px; flex: none; transform: translateY(2px); }
     .t-geal { color: var(--brand-silver); }
@@ -210,6 +258,21 @@
         <img src="icons/icon.svg" alt="" class="brand-icon" />
         <h1 class="brand-name"><span class="t-geal">geal</span><span class="t-ach">ach</span></h1>
       </div>
+      <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Colour theme" title="Colour theme">
+        <svg class="theme-icon theme-icon-system" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
+          <path fill="currentColor" d="M12 3a9 9 0 0 1 0 18z"/>
+        </svg>
+        <svg class="theme-icon theme-icon-light" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+          <circle cx="12" cy="12" r="4.5" fill="currentColor"/>
+          <g stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M12 2.5v2.5M12 19v2.5M2.5 12h2.5M19 12h2.5M5 5l1.8 1.8M17.2 17.2L19 19M19 5l-1.8 1.8M6.8 17.2L5 19"/>
+          </g>
+        </svg>
+        <svg class="theme-icon theme-icon-dark" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+          <path fill="currentColor" d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/>
+        </svg>
+      </button>
     </header>
 
     <form id="search" role="search">

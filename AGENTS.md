@@ -417,7 +417,13 @@ Update this section in the same commit that adds or upgrades a dependency.
   - Phone-first: readable at arm's length, outdoors, one-handed. Large type for
     the two numbers that matter (height now, and time to the next turn).
   - One stylesheet, inline in `index.html`, per the house preference.
-  - `prefers-color-scheme` respected; the display is looked at on a dark quay.
+  - `prefers-color-scheme` respected, and overridable: the header's theme
+    button cycles System → Light → Dark. The choice is kept in `localStorage`
+    (`gealach-theme`) and applied as `data-theme` on `<html>`, which wins over
+    the media query; "System" removes the attribute and follows the device
+    again. The button shows one of three glyphs (half-filled circle, sun,
+    moon) for the active state, and the `theme-color` meta is collapsed to a
+    single value matching what is on screen.
 - **Docs**: <https://developer.mozilla.org/en-US/docs/Web/CSS>
 
 ### JavaScript (ES modules, no bundler)

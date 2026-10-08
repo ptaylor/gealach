@@ -52,6 +52,71 @@ function distanceBandEvent(r) {
   return "distance-global";
 }
 
+// ---------------------------------------------------------------------------
+// colour theme
+//
+// The palette follows the device by default (prefers-color-scheme). The reader
+// can override it to light or dark; the choice is kept in localStorage and
+// applied as data-theme on <html>, which wins over the media query. "system"
+// (the default) removes the attribute and lets the device decide.
+
+const THEME_KEY = "gealach-theme";
+const THEME_CYCLE = ["system", "light", "dark"];
+
+function initTheme() {
+  applyTheme(getStoredTheme());
+}
+
+function getStoredTheme() {
+  try {
+    const v = localStorage.getItem(THEME_KEY);
+    return THEME_CYCLE.includes(v) ? v : "system";
+  } catch {
+    return "system";
+  }
+}
+
+function cycleTheme() {
+  const next = THEME_CYCLE[(THEME_CYCLE.indexOf(getStoredTheme()) + 1) % THEME_CYCLE.length];
+  try {
+    if (next === "system") localStorage.removeItem(THEME_KEY);
+    else localStorage.setItem(THEME_KEY, next);
+  } catch {
+    /* storage unavailable — the choice just is not persisted */
+  }
+  applyTheme(next);
+  trackEvent(`theme-${next}`);
+}
+
+function applyTheme(theme) {
+  const root = document.documentElement;
+  if (theme === "system") root.removeAttribute("data-theme");
+  else root.setAttribute("data-theme", theme);
+
+  const btn = document.querySelector("#theme-toggle");
+  if (btn) {
+    btn.setAttribute("data-theme", theme);
+    btn.setAttribute("aria-label", `Colour theme: ${theme}`);
+    btn.title = `Colour theme: ${theme}`;
+  }
+  updateThemeColorMeta();
+}
+
+// The status-bar / browser-chrome tint has one meta per scheme, chosen by the
+// media attribute. When the reader forces a scheme, collapse them to a single
+// meta whose content matches what is actually on screen.
+function updateThemeColorMeta() {
+  const explicit = document.documentElement.getAttribute("data-theme");
+  const dark = explicit
+    ? explicit === "dark"
+    : matchMedia("(prefers-color-scheme: dark)").matches;
+  const metas = [...document.querySelectorAll('meta[name="theme-color"]')];
+  if (!metas.length) return;
+  metas[0].setAttribute("content", dark ? "#0f1115" : "#0b6bcb");
+  metas[0].removeAttribute("media");
+  for (const extra of metas.slice(1)) extra.remove();
+}
+
 const ATTRIBUTION =
   "Data: Marine Institute (CC-BY 4.0) · Open-Meteo & GeoNames (CC-BY 4.0) · NOAA · OpenStreetMap (ODbL).";
 
@@ -77,6 +142,8 @@ const FAVOURITES_KEY = "gealach-favourites";
 init();
 
 async function init() {
+  initTheme();
+  $("theme-toggle").addEventListener("click", cycleTheme);
   $("search").addEventListener("submit", onSubmit);
   // iOS fires a `search` event on a type=search input instead of submitting the
   // form; route it through the same path so the keyboard search key works there.
