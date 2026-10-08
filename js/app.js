@@ -1075,8 +1075,25 @@ function renderSummary() {
   drawSummaryCurve(series, now, turns);
 
   const hasODM = hasODMSeries(r);
-  $("sum-high").textContent = summaryTurnText("High", turns.nextHigh, hasODM);
-  $("sum-low").textContent = summaryTurnText("Low", turns.nextLow, hasODM);
+  // Show the turns in the order they happen, so the next one is always on the
+  // left whichever it is. A missing turn keeps its slot as a placeholder so the
+  // row stays balanced.
+  const turnBlocks = [
+    { label: "High", turn: turns.nextHigh },
+    { label: "Low", turn: turns.nextLow },
+  ]
+    .sort((a, b) => {
+      const am = a.turn ? a.turn.minutesTo : Infinity;
+      const bm = b.turn ? b.turn.minutesTo : Infinity;
+      return am - bm;
+    })
+    .map((b) => {
+      const el = document.createElement("div");
+      el.className = "sum-turn";
+      el.textContent = summaryTurnText(b.label, b.turn, hasODM);
+      return el;
+    });
+  $("sum-turns").replaceChildren(...turnBlocks);
 }
 
 function summaryTurnText(label, t, hasODM) {
