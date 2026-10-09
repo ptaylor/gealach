@@ -216,11 +216,25 @@ async function init() {
   window.addEventListener("scroll", repositionHint, { passive: true });
   window.addEventListener("resize", repositionHint);
   window.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && activeHint) dismissHint();
+    if (e.key !== "Escape") return;
+    if (activeHint) dismissHint();
+    else if (!$("debug-overlay").classList.contains("hidden")) closeDebug();
   });
   $("info-close").addEventListener("click", closeInfo);
   $("info-overlay").addEventListener("click", (e) => {
     if (e.target === $("info-overlay")) closeInfo();
+  });
+  const hotspot = $("debug-hotspot");
+  hotspot.addEventListener("pointerdown", startDebugHold);
+  hotspot.addEventListener("pointerup", cancelDebugHold);
+  hotspot.addEventListener("pointerleave", cancelDebugHold);
+  hotspot.addEventListener("pointercancel", cancelDebugHold);
+  hotspot.addEventListener("contextmenu", (e) => e.preventDefault());
+  $("debug-clear-hints").addEventListener("click", clearFirstRunHints);
+  $("debug-clear-all").addEventListener("click", clearAllData);
+  $("debug-close").addEventListener("click", closeDebug);
+  $("debug-overlay").addEventListener("click", (e) => {
+    if (e.target === $("debug-overlay")) closeDebug();
   });
   const brand = $("brand");
   brand.addEventListener("pointerdown", startInfoHold);
@@ -312,6 +326,9 @@ let activeHint = null;
 // reachable; a no-op when a hint is already up.
 function maybeHint() {
   if (activeHint) return;
+  // Never interrupt the developer overlay (its "clear" actions can make a hint
+  // eligible again; it should wait until the overlay is closed).
+  if (!$("debug-overlay").classList.contains("hidden")) return;
   const seen = loadSeenHints();
   for (const h of HINTS) {
     if (seen.includes(h.id)) continue;
@@ -1267,6 +1284,74 @@ function closeInfo() {
 function versionText() {
   const meta = document.querySelector('meta[name="version"]');
   return meta ? `Version ${meta.content}` : "Version unknown";
+}
+
+// ---------------------------------------------------------------------------
+// developer overlay (long-press the top-right corner of the info panel)
+//
+// A hidden door for testing device state without devtools: it can clear the
+// first-run hints (so the coachmarks show again) or wipe every localStorage
+// key this app owns. Nothing here talks to a source; it only touches the
+// device's own stored state.
+
+const LOCAL_KEYS = [THEME_KEY, FAVOURITES_KEY, HINTS_KEY];
+
+let debugHoldTimer = null;
+
+function startDebugHold() {
+  cancelDebugHold();
+  debugHoldTimer = setTimeout(openDebug, 3000);
+}
+
+function cancelDebugHold() {
+  if (debugHoldTimer) {
+    clearTimeout(debugHoldTimer);
+    debugHoldTimer = null;
+  }
+}
+
+function openDebug() {
+  closeInfo();
+  setDebugNote("Local data on this device.");
+  $("debug-overlay").classList.remove("hidden");
+}
+
+function closeDebug() {
+  $("debug-overlay").classList.add("hidden");
+  // A clear action may have made a hint eligible again; offer it now the
+  // overlay is out of the way (a no-op when every hint is already seen).
+  maybeHint();
+}
+
+function setDebugNote(msg) {
+  $("debug-note").textContent = msg;
+}
+
+// Clear one or more of our own localStorage keys, then re-apply the state so
+// the change is visible without a manual reload.
+function clearLocalKeys(keys) {
+  for (const k of keys) {
+    try {
+      localStorage.removeItem(k);
+    } catch {
+      /* storage unavailable — nothing to clear */
+    }
+  }
+}
+
+function clearFirstRunHints() {
+  clearLocalKeys([HINTS_KEY]);
+  setDebugNote("First-run hints cleared — they will show again.");
+}
+
+function clearAllData() {
+  clearLocalKeys(LOCAL_KEYS);
+  // Put the app back to a cold state: theme to the device default, empty
+  // favourites, no hints seen.
+  initTheme();
+  loadFavourites();
+  renderFavourites();
+  setDebugNote("All local data cleared.");
 }
 
 // ---------------------------------------------------------------------------

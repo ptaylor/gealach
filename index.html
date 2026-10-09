@@ -259,6 +259,29 @@
     .info-link { display: block; color: var(--accent); margin-bottom: 1rem; }
     .info-close { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 0.5rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer; }
 
+    /* Developer door: an invisible hit-area in the top-right corner of the
+       info panel. Long-pressing it (3 s) opens the debug overlay. It has no
+       visual presence so it does not invite a tap. */
+    .overlay-panel { position: relative; }
+    .debug-hotspot { position: absolute; top: 0; right: 0; width: 56px; height: 56px; padding: 0; border: 0; background: transparent; cursor: default; -webkit-tap-highlight-color: transparent; }
+    .debug-panel { text-align: left; }
+    .debug-quote { margin: 0 0 0.9rem; text-align: center; }
+    .debug-quote-link {
+      display: block;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-style: italic;
+      font-size: 1.05rem;
+      line-height: 1.35;
+      color: var(--moon-lit);
+      text-decoration: none;
+    }
+    .debug-quote-link:hover { text-decoration: underline; }
+    .debug-quote-cite { display: block; margin-top: 0.3rem; font-size: 0.8rem; font-style: normal; color: var(--muted); }
+    .debug-note { color: var(--muted); font-size: 0.85rem; margin: 0 0 1rem; }
+    .debug-btn { display: block; width: 100%; margin-bottom: 0.6rem; padding: 0.6rem 0.9rem; font-size: 0.95rem; font-weight: 600; border: 1px solid var(--border); border-radius: 10px; background: var(--card); color: var(--fg); cursor: pointer; }
+    .debug-btn-danger { color: var(--bad); border-color: var(--bad); }
+    .debug-panel .info-close { display: block; width: 100%; margin-top: 0.4rem; }
+
     /* First-run hints: a dimmed scrim with a hole cut over the target element
        (the spotlight), and a small bubble of text with a "Got it" button. The
        hole is made by an enormous spread shadow on the ring, so it tracks the
@@ -437,6 +460,7 @@
       <img src="icons/icon.svg" alt="" class="info-icon" />
       <h2 class="brand-name"><span class="t-geal">geal</span><span class="t-ach">ach</span></h2>
       <div class="info-version" id="info-version"></div>
+      <button class="debug-hotspot" type="button" id="debug-hotspot" aria-label="The Secret Rose" title=""></button>
       <blockquote class="info-quote">
         <a class="info-quote-link" href="https://en.wikisource.org/wiki/The_Wanderings_of_Oisin_and_Other_Poems/The_Wanderings_of_Oisin" target="_blank" rel="noopener">&ldquo;And the moon goad the waters night and day&rdquo;</a>
         <cite class="info-quote-cite">W. B. Yeats, <i>The Wanderings of Oisin</i></cite>
@@ -445,6 +469,19 @@
       <a class="info-link" href="https://github.com/ptaylor/gealach/issues/new?template=data-inaccuracy.md" target="_blank" rel="noopener">⚠️ Report a data inaccuracy</a>
       <a class="info-link" href="https://github.com/ptaylor/gealach/issues/new?template=feature-request.md" target="_blank" rel="noopener">💡 Suggest a feature</a>
       <button class="info-close" type="button" id="info-close">Close</button>
+    </div>
+  </div>
+
+  <div id="debug-overlay" class="overlay hidden">
+    <div class="overlay-panel debug-panel">
+      <blockquote class="debug-quote">
+        <a class="debug-quote-link" href="https://en.wikisource.org/wiki/The_Secret_Rose" target="_blank" rel="noopener">&ldquo;The Secret Rose&rdquo;</a>
+        <cite class="debug-quote-cite">W. B. Yeats</cite>
+      </blockquote>
+      <p class="debug-note" id="debug-note">Local data on this device.</p>
+      <button class="debug-btn" type="button" id="debug-clear-hints">Clear first-run hints</button>
+      <button class="debug-btn debug-btn-danger" type="button" id="debug-clear-all">Clear all data</button>
+      <button class="info-close" type="button" id="debug-close">Close</button>
     </div>
   </div>
 

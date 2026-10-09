@@ -544,6 +544,35 @@ Update this section in the same commit that adds or upgrades a dependency.
     let the reader interact through it.
   - These are UI-only; nothing here talks to a source. Remove the whole feature
     by deleting `HINTS`/the hint functions and the `.hint-*` CSS/markup.
+
+### Developer overlay (the hidden door — "The Secret Rose")
+
+- **Role**: a developer/testing panel to reset this device's stored state
+  without devtools. Two actions: clear the first-run hints (so the coachmarks
+  show again) and clear **all** local data (theme, favourites and hints). A
+  testing aid (2026-10-09), not a user feature. Titled **"The Secret Rose"** —
+  a Yeats poem, set in the same gold italic serif as the app's other quotes and
+  linked to Wikisource — so the door reads as a place, not a settings menu.
+- **Version**: no dependency; plain DOM in `index.html` (`#debug-overlay`) and
+  `js/app.js`.
+- **Best Practices**:
+  - **Hidden by design.** Opened only by a **3-second long-press** on an
+    invisible hit-area (`#debug-hotspot`) in the top-right corner of the
+    *about* panel (`.overlay-panel` is `position: relative`, the hotspot is
+    absolute). A short press does nothing; the hotspot has no visual presence,
+    so it does not invite a tap. It does not appear on the page itself.
+  - **It only clears our own keys**, listed once in `LOCAL_KEYS`
+    (`gealach-theme`, `gealach-favourites`, `gealach-hints-seen`). "Clear all
+    data" also re-applies theme/favourites through the normal
+    `initTheme`/`loadFavourites`/`renderFavourites` paths, so the change is
+    visible without a reload.
+  - Closing the overlay calls `maybeHint()`, so clearing the hints makes the
+    next coachmark reappear. While the overlay is open `maybeHint()` is a no-op
+    (it must not pop a hint over the panel it was launched from).
+  - Dismissed by the Close button, a tap on the backdrop, or `Escape`.
+  - Remove the feature by deleting `#debug-overlay`/`#debug-hotspot` and the
+    `startDebugHold`/`openDebug`/`clearLocalKeys`/… functions and the
+    `.debug-*` CSS.
 ### Marine Institute ERDDAP (primary data source)
 
 - **Role**: Irish tide predictions, high/low turns, surge split, gauge
