@@ -300,7 +300,11 @@ Numbered, as agreed, so a later change can be checked against them.
    exceptions: they name a place already chosen, so they load the tide
    directly. Whichever path is taken, resolve the point to the **nearest
    prediction station**, and show its name, its coordinates and the distance
-   from the point asked about.
+   from the point asked about. When the located point is further than
+   `MAX_STATION_DISTANCE_KM` from any station — an inland or vague search — the
+   map card offers a one-tap **jump to the nearest prediction station**, which
+   pans there but still does not fetch; the tap that reads the tide is the
+   reader's, so the number always has a point on screen behind it.
 3. Warn — prominently, not subtly — when the nearest station is further than a
    documented threshold (`MAX_STATION_DISTANCE_KM`, **25 km**), and never
    silently present a distant station as local.
@@ -507,7 +511,9 @@ Update this section in the same commit that adds or upgrades a dependency.
     `source-marine-ie|open-meteo`; distance `distance-local|warned|global`;
     surge `surge-shown|none`; switches `switch-marine|openmeteo`,
     `datum-lat|odm`; engagement `details-open`, `map-open`,
-    `favourite-add|open|rename|remove`, `install-shown`, `installed`;
+    `favourite-add|open|rename|remove`, `install-shown`, `installed`,
+    `station-jump` (the offer to reach the nearest prediction station from a
+    located inland point);
     failures `error-geocode`, `error-source`. `error-no-station` and
     `error-out-of-window` are reserved for when those failure paths become
     explicit.

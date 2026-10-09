@@ -132,6 +132,10 @@
     #map-card { padding: 0; overflow: hidden; position: relative; }
     #map { height: 260px; }
     #map-card p { padding: 0.6rem 1rem; margin: 0; }
+    .coast-row { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; padding: 0 1rem 0.8rem; }
+    .coast-btn { font-size: 0.9rem; font-weight: 600; padding: 0.45rem 0.8rem; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--accent); cursor: pointer; }
+    .coast-btn:disabled { opacity: 0.6; cursor: default; }
+    .coast-status { font-size: 0.8rem; }
     .locate { position: absolute; top: 10px; right: 10px; z-index: 1000; background: var(--card); border: 1px solid var(--border); border-radius: 8px; font-size: 1.1rem; line-height: 1; padding: 0.45rem 0.6rem; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,.25); }
     .locate:disabled { opacity: 0.6; cursor: default; }
 
@@ -319,6 +323,10 @@
         </svg>
       </button>
       <p class="muted">Tap the coast to get the tide there. Map data © OpenStreetMap contributors.</p>
+      <div id="coast-row" class="coast-row hidden">
+        <button id="coast-btn" class="coast-btn" type="button">Jump to nearest tide</button>
+        <span id="coast-status" class="coast-status muted" role="status"></span>
+      </div>
     </div>
 
     <section id="summary" class="card hidden">

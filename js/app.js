@@ -137,6 +137,8 @@ let map = null;
 let mapMarker = null;
 let favourites = [];
 let currentPoint = null;
+// The nearest prediction station offered as a one-tap jump for a located point.
+let stationOffer = null;
 const FAVOURITES_KEY = "gealach-favourites";
 
 init();
@@ -152,6 +154,7 @@ async function init() {
     onSubmit(e);
   });
   $("map-toggle").addEventListener("click", toggleMap);
+  $("coast-btn").addEventListener("click", jumpToNearestStation);
   $("sum-locate").addEventListener("click", showOnMap);
   $("sum-name").addEventListener("click", showOnMap);
   $("sum-name").addEventListener("keydown", (e) => {
@@ -258,6 +261,36 @@ function locateOnMap(lat, lon) {
   $("result").classList.add("hidden");
   setSearchError("");
   setStatus("");
+  updateStationOffer(lat, lon);
+}
+
+// Offer a one-tap jump to the nearest place that actually has a tide, so a
+// search for an inland or vague place still lands somewhere answerable. Hidden
+// when the point is already at (or very near) a station.
+function updateStationOffer(lat, lon) {
+  const row = $("coast-row");
+  const btn = $("coast-btn");
+  const status = $("coast-status");
+  status.textContent = "";
+  btn.disabled = false;
+  const near = stations.length ? nearestStation({ latitude: lat, longitude: lon }, stations) : null;
+  if (!near || near.distanceKm <= MAX_STATION_DISTANCE_KM) {
+    row.classList.add("hidden");
+    return;
+  }
+  stationOffer = near;
+  btn.textContent = `Jump to ${near.name} (${km(near.distanceKm)} away)`;
+  row.classList.remove("hidden");
+}
+
+// Move the map to the nearest station offered for the located point. The tide
+// is still loaded by tapping the map, so the reader sees where it came from.
+function jumpToNearestStation() {
+  if (!stationOffer) return;
+  trackEvent("station-jump");
+  const { latitude: lat, longitude: lon, name, distanceKm } = stationOffer;
+  revealMapAt(lat, lon, 13);
+  $("coast-status").textContent = `${name} — the nearest place with a tide (${km(distanceKm)}). Tap the map to read it.`;
 }
 
 function revealMapAt(lat, lon, zoom) {
@@ -508,6 +541,10 @@ async function load(point) {
 function loadPoint(point, { zone: tz, label } = {}) {
   abort();
   hideChoices();
+  // A tide is being loaded for this point, so the "jump to a station" offer
+  // for a previously located point no longer applies.
+  $("coast-row").classList.add("hidden");
+  stationOffer = null;
   $("result").classList.add("hidden");
   setSearchError("");
   if (tz) setZone(tz);
