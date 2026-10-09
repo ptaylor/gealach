@@ -173,6 +173,11 @@ const HINTS = [
     text: "Save this spot to your favourites, so you can return to it in one tap.",
   },
   {
+    id: "details",
+    anchor: () => (isVisible($("details-toggle")) ? $("details-toggle") : null),
+    text: "Open Details for the datum, the modelled current, the moon, and the source behind every number.",
+  },
+  {
     id: "rename",
     anchor: () => document.querySelector("#favourites-list .fave-rename"),
     text: "Tap the pencil to rename a favourite — call it anything you like.",

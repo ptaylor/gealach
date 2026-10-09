@@ -513,8 +513,8 @@ Update this section in the same commit that adds or upgrades a dependency.
     `datum-lat|odm`; engagement `details-open`, `map-open`,
     `favourite-add|open|rename|remove`, `install-shown`, `installed`,
     `station-jump` (the offer to reach the nearest prediction station from a
-    located inland point), `hint-search|jump|map-tap|heart|rename` (a first-run
-    coachmark was shown);
+    located inland point), `hint-search|jump|map-tap|heart|details|rename` (a
+    first-run coachmark was shown);
     failures `error-geocode`, `error-source`. `error-no-station` and
     `error-out-of-window` are reserved for when those failure paths become
     explicit.
