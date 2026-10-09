@@ -415,9 +415,15 @@ async function onSubmit(e) {
   hideChoices();
   // A search locates a point on the map and does not load a tide, so any
   // previous result (the summary card and the surge/provenance block) is
-  // cleared until the reader taps the map.
+  // cleared until the reader taps the map. The map card is cleared too, so a
+  // failed lookup leaves just the message under the search bar rather than a
+  // stale pin from the last search.
   $("result").classList.add("hidden");
   $("summary").classList.add("hidden");
+  $("map-card").classList.add("hidden");
+  $("map-toggle").setAttribute("aria-expanded", "false");
+  $("coast-row").classList.add("hidden");
+  stationOffer = null;
   setSearchError("");
   setStatus(`Looking up “${q}”…`);
 
