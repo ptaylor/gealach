@@ -562,9 +562,11 @@ Update this section in the same commit that adds or upgrades a dependency.
 - **Role**: place name → coordinates, timezone, and country.
 - **Version**: `/v1/search`, GeoNames-derived.
 - **Best Practices**:
-  - Send `count` and `language`, prefer results with `country_code = "IE"` when
-    fishing near Ireland, but **show the alternatives** rather than silently
-    picking one — "Galway" also matches a town in Tennessee (verified).
+  - Send `count` and `language`, and bias the search towards Ireland with the
+    API's own `countryCode=IE` filter (a second, unbounded call supplies the
+    worldwide alternatives). Ireland always ranks first — an Irish tide tool
+    should mean Irish Galway — but the alternatives are **shown**, never hidden
+    or silently picked — "Galway" also matches a town in Tennessee (verified).
   - GeoNames misses many Irish townlands, so when no result has
     `country_code = "IE"`, fall back to Photon forward geocoding (OSM) and
     merge the alternatives; resolve Photon's missing timezone with

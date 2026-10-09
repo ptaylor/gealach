@@ -434,9 +434,16 @@ async function onSubmit(e) {
   }
 
   trackEvent("search-name");
+  // Ask the GeoNames-backed geocoder for Irish matches first — this is an
+  // Irish tide tool, so "Galway" should mean Galway. The worldwide list is
+  // fetched as well so the alternatives are still offered, not hidden.
   let geo;
+  let world;
   try {
-    geo = await geocode(q, { signal: controller.signal });
+    [geo, world] = await Promise.all([
+      geocode(q, { countryCode: "IE", signal: controller.signal }),
+      geocode(q, { signal: controller.signal }),
+    ]);
   } catch (err) {
     if (err.name === "AbortError") return;
     trackEvent("error-geocode");
@@ -444,15 +451,17 @@ async function onSubmit(e) {
     setSearchError(`Could not look up “${q}”: ${err.message}`);
     return;
   }
-  if (!geo.results.length) {
+  if (!geo.results.length && !world.results.length) {
     setStatus("");
     setSearchError(`No place found for “${q}”.`);
     return;
   }
   // Prefer Ireland, but show the alternatives rather than silently choosing.
+  // Merge the Irish-biased list ahead of the worldwide one (Irish first, then
+  // the rest, de-duplicated) so the reader sees Ireland at the top.
   // GeoNames misses many Irish townlands (e.g. "Cahore" only resolves to
   // Ontario), so when there is no Irish match, merge in Photon (OSM) results.
-  let results = geo.results;
+  let results = mergeGeoResults(geo.results, world.results);
   if (!results.some((r) => r.countryCode === "IE")) {
     try {
       const photon = await photonSearch(q, { signal: controller.signal });
@@ -465,6 +474,8 @@ async function onSubmit(e) {
       /* keep the Open-Meteo results on a Photon failure */
     }
   }
+  // Ireland always ranks first, regardless of which source supplied the match.
+  results = sortByIreland(results);
   geoResults = results;
   if (results.length > 1) trackEvent("geocode-ambiguous");
   const def = results.find((r) => r.countryCode === "IE") || results[0];
@@ -698,6 +709,15 @@ function mergeGeoResults(a, b) {
     out.push(r);
   }
   return out;
+}
+
+// Ireland first, then everything else in the order the geocoder gave it. This
+// is an Irish tide tool: an Irish match should be the one the map jumps to and
+// the one the alternatives list leads with, without hiding the rest.
+function sortByIreland(results) {
+  return [...results].sort(
+    (a, b) => (b.countryCode === "IE" ? 1 : 0) - (a.countryCode === "IE" ? 1 : 0),
+  );
 }
 
 function setStatus(msg) {

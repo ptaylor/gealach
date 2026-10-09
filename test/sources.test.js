@@ -50,6 +50,16 @@ test("geocode parses results and exposes the alternatives", async () => {
   assert.ok(out.results.some((r) => r.countryCode === "US"), "US alternatives shown");
 });
 
+test("geocode sends the countryCode bias when asked for Ireland", async () => {
+  let seen = null;
+  globalThis.fetch = async (url) => {
+    seen = String(url);
+    return jsonResponse(await fixture("geocode-galway.json"));
+  };
+  await geocode("Galway", { countryCode: "IE" });
+  assert.ok(seen.includes("countryCode=IE"), `countryCode bias in URL: ${seen}`);
+});
+
 test("marineIeTides normalises the ERDDAP curve and turns", async () => {
   const stations = [
     { id: "Galway", name: "Galway", kind: "gauge", latitude: 53.27, longitude: -9.05 },
