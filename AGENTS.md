@@ -383,7 +383,7 @@ Two platform traps to remember, both of which cost an afternoon if forgotten:
 
 | Path | What it is |
 | --- | --- |
-| `index.html` | The app shell — markup, inline CSS, module entry. |
+| `index.html` | The app shell — markup, inline CSS, module entry, the about overlay and the first-run hint layer. |
 | `js/sources.js` | Source adapters; the only place that knows a provider's URL shape. DOM-free, unit-tested. |
 | `js/tide.js` | Pure derivations: nearest station, rate, next turn, range, springs/neaps. DOM-free, unit-tested. |
 | `js/app.js` | DOM, rendering, map browsing, install prompt, offline banner. |
@@ -513,12 +513,37 @@ Update this section in the same commit that adds or upgrades a dependency.
     `datum-lat|odm`; engagement `details-open`, `map-open`,
     `favourite-add|open|rename|remove`, `install-shown`, `installed`,
     `station-jump` (the offer to reach the nearest prediction station from a
-    located inland point);
+    located inland point), `hint-search|jump|map-tap|heart|rename` (a first-run
+    coachmark was shown);
     failures `error-geocode`, `error-source`. `error-no-station` and
     `error-out-of-window` are reserved for when those failure paths become
     explicit.
 - **Docs**: <https://www.goatcounter.com/> · <https://www.goatcounter.com/api.html>
+### First-run hints (coachmarks)
 
+- **Role**: a short set of coachmarks that point out the app's gestures the
+  first time each becomes reachable — search, jump-to-nearest-sea, tap-the-map,
+  save-to-favourites, rename-a-favourite. A one-off onboarding experiment
+  (2026-10-09).
+- **Version**: no dependency; plain DOM in `index.html` (`.hint-layer`) and
+  `js/app.js`.
+- **Best Practices**:
+  - **Contextual, not a fixed tour.** The later hints anchor to controls that
+    do not exist on a cold first run (the heart, a favourite's rename pencil),
+    so each hint is offered from the flow at the moment its subject appears, via
+    one guarded `maybeHint()` call. `HINTS` order is the priority order.
+  - **Once per device.** "Seen" is a growing array under
+    `localStorage["gealach-hints-seen"]`; a hint already there is never shown
+    again. It is **not** versioned, so a release does not re-show them (a
+    deliberate choice — see the experiment note).
+  - The spotlight is a ring (`#hint-ring`) with a huge spread `box-shadow`, so
+    the hole tracks the element's live rect without any masking; the ring and
+    bubble are repositioned on scroll/resize while open.
+  - Dismissed by the "Got it" button, a tap on the scrim, or `Escape`. It is a
+    real modal (`role="dialog"`, `aria-modal`) that dims the page — it does not
+    let the reader interact through it.
+  - These are UI-only; nothing here talks to a source. Remove the whole feature
+    by deleting `HINTS`/the hint functions and the `.hint-*` CSS/markup.
 ### Marine Institute ERDDAP (primary data source)
 
 - **Role**: Irish tide predictions, high/low turns, surge split, gauge
