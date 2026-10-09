@@ -245,14 +245,29 @@ function toggleMap() {
 
 function showOnMap() {
   if (!currentPoint) return;
+  const { latitude: lat, longitude: lon } = currentPoint;
+  revealMapAt(lat, lon, 14);
+}
+
+// Locate a searched point on the map: reveal the map, pan to the point and
+// drop the pin. No tide is fetched — the reader taps the map for that.
+function locateOnMap(lat, lon) {
+  revealMapAt(lat, lon, 14);
+  // No tide for a located point: clear any result already on screen.
+  $("summary").classList.add("hidden");
+  $("result").classList.add("hidden");
+  setSearchError("");
+  setStatus("");
+}
+
+function revealMapAt(lat, lon, zoom) {
   const card = $("map-card");
   if (card.classList.contains("hidden")) {
     card.classList.remove("hidden");
     $("map-toggle").setAttribute("aria-expanded", "true");
   }
   initMap();
-  const { latitude: lat, longitude: lon } = currentPoint;
-  map.setView([lat, lon], 14);
+  map.setView([lat, lon], zoom);
   placeMarker(lat, lon);
   requestAnimationFrame(() => map && map.invalidateSize());
   card.scrollIntoView({ block: "nearest", behavior: "smooth" });
@@ -365,7 +380,11 @@ async function onSubmit(e) {
   lastSearchMs = now;
   abort();
   hideChoices();
+  // A search locates a point on the map and does not load a tide, so any
+  // previous result (the summary card and the surge/provenance block) is
+  // cleared until the reader taps the map.
   $("result").classList.add("hidden");
+  $("summary").classList.add("hidden");
   setSearchError("");
   setStatus(`Looking up “${q}”…`);
 
@@ -374,10 +393,9 @@ async function onSubmit(e) {
     const lat = Number(coord[1]);
     const lon = Number(coord[2]);
     if (Math.abs(lat) <= 90 && Math.abs(lon) <= 180) {
-      setZone("UTC");
-      placeLabel = `${lat.toFixed(4)}, ${lon.toFixed(4)} (coordinates — UTC shown)`;
       trackEvent("search-coords");
-      await load({ latitude: lat, longitude: lon });
+      setStatus("");
+      locateOnMap(lat, lon);
       return;
     }
   }
@@ -418,30 +436,19 @@ async function onSubmit(e) {
   if (results.length > 1) trackEvent("geocode-ambiguous");
   const def = results.find((r) => r.countryCode === "IE") || results[0];
   showChoices(results, def);
-  // First result chosen automatically, but keep the alternatives on screen so
-  // the reader can pick a different match (requirement: show the alternatives
-  // rather than silently choosing).
-  await choose(def, { keepChoices: true });
+  // A search locates a position on the map and nothing more; the tide loads
+  // when the reader taps the map. Keep the alternatives on screen so a
+  // different match can be picked.
+  choose(def);
 }
 
-async function choose(r, { fromChip = false, keepChoices = false } = {}) {
-  abort();
-  let tz = r.timezone || "UTC";
-  if (!r.timezone) {
-    // Photon results carry no timezone; resolve it from the point so the
-    // display stays in local time (requirement 11).
-    try {
-      tz = (await timezoneAt(r, { signal: controller.signal })).timezone;
-    } catch {
-      tz = "UTC";
-    }
-  }
+// Pick a geocoder result: move the map there and drop the pin, without
+// loading a tide. `fromChip` is a tap on one of the alternatives.
+function choose(r, { fromChip = false } = {}) {
   if (fromChip) hideChoices();
   else showChoices(geoResults, r);
-  await loadPoint(
-    { latitude: r.latitude, longitude: r.longitude },
-    { zone: tz, label: `${r.name}, ${r.admin1 ?? r.country}`, keepChoices },
-  );
+  placeLabel = `${r.name}, ${r.admin1 ?? r.country}`;
+  locateOnMap(r.latitude, r.longitude);
 }
 
 async function load(point) {
@@ -495,15 +502,12 @@ async function load(point) {
 }
 
 // Shared preamble for resolving a point: cancel any in-flight request, clear
-// the previous choices and result, apply the place's label and timezone, and
-// load. Callers that need the timezone before loading still call abort() first
-// (a second abort is harmless).
-function loadPoint(point, { zone: tz, label, keepChoices = false } = {}) {
+// the previous choices and any search error, apply the place's label and
+// timezone, and load. Callers that need the timezone before loading still call
+// abort() first (a second abort is harmless).
+function loadPoint(point, { zone: tz, label } = {}) {
   abort();
-  // Keep the alternatives list on screen when the load came from a name
-  // search; a map pick, a geolocate or a favourite open replaces the location
-  // entirely, so those clear it.
-  if (!keepChoices) hideChoices();
+  hideChoices();
   $("result").classList.add("hidden");
   setSearchError("");
   if (tz) setZone(tz);
