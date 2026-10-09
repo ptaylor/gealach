@@ -31,8 +31,11 @@ not called. Where a candidate source was *not* verified, it says so (see
 
 ## What the tool is for
 
-1. **Enter a location** — a place name, or a latitude/longitude — and get the
-   tide there, or at the nearest place that has predictions.
+1. **Find a place on the map** — type a place name or a latitude/longitude, or
+   tap the map, then read the tide there, or at the nearest place that has
+   predictions. A search only *locates* the point (it opens the map, pans to it
+   and drops a pin); the tide is fetched when the map itself is tapped, so the
+   reader always sees where the number came from.
 2. **Say what the tide is doing**, not just what height it is: rising or
    falling, how fast, how long until high or low, what height that turn will
    be, and whether the range is spring or neap.
@@ -290,8 +293,14 @@ Numbered, as agreed, so a later change can be checked against them.
 
 1. Enter a location as a place name or as latitude/longitude. A name is
    geocoded live; a coordinate is used as given.
-2. Resolve the point to the **nearest prediction station**, and show its name,
-   its coordinates and the distance from the point asked about.
+2. **The search locates, it does not fetch.** A name or coordinate opens the
+   map, pans to the point and drops a pin — nothing else. The tide is loaded
+   when the **map is tapped**, which is the one gesture that answers "what is
+   the tide at this point". "Locate me" and opening a favourite are the
+   exceptions: they name a place already chosen, so they load the tide
+   directly. Whichever path is taken, resolve the point to the **nearest
+   prediction station**, and show its name, its coordinates and the distance
+   from the point asked about.
 3. Warn — prominently, not subtly — when the nearest station is further than a
    documented threshold (`MAX_STATION_DISTANCE_KM`, **25 km**), and never
    silently present a distant station as local.
