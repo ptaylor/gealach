@@ -137,7 +137,52 @@ let map = null;
 let mapMarker = null;
 let favourites = [];
 let currentPoint = null;
+// The nearest prediction station offered as a one-tap jump for a located point.
+let stationOffer = null;
 const FAVOURITES_KEY = "gealach-favourites";
+
+// ---------------------------------------------------------------------------
+// first-run hints
+//
+// A short set of coachmarks, each anchored to the element it explains and shown
+// at most once ever. The later hints point at controls that do not exist on a
+// cold first run (the heart, a favourite's rename pencil), so a hint is only
+// offered when its target is on screen and usable — driven from the flow, not a
+// fixed tour. "Seen" is a growing list in localStorage, so a hint already shown
+// never returns, on this device.
+const HINTS_KEY = "gealach-hints-seen";
+const HINTS = [
+  {
+    id: "search",
+    anchor: () => $("q"),
+    text: "Start here: type a place name (or “53.27, -9.05”) and tap search. The map opens where it finds.",
+  },
+  {
+    id: "jump",
+    anchor: () => (isVisible($("coast-row")) ? $("coast-btn") : null),
+    text: "That place is inland, so here is the nearest sea. Tap to jump the map to it.",
+  },
+  {
+    id: "map-tap",
+    anchor: () => (isVisible($("map-card")) && !currentPoint ? $("map") : null),
+    text: "Tap anywhere on the coast — that sets the point the tide is read for.",
+  },
+  {
+    id: "heart",
+    anchor: () => (isVisible($("sum-heart")) ? $("sum-heart") : null),
+    text: "Save this spot to your favourites, so you can return to it in one tap.",
+  },
+  {
+    id: "details",
+    anchor: () => (isVisible($("details-toggle")) ? $("details-toggle") : null),
+    text: "Open Details for the datum, the modelled current, the moon, and the source behind every number.",
+  },
+  {
+    id: "rename",
+    anchor: () => document.querySelector("#favourites-list .fave-rename"),
+    text: "Tap the pencil to rename a favourite — call it anything you like.",
+  },
+];
 
 init();
 
@@ -152,6 +197,7 @@ async function init() {
     onSubmit(e);
   });
   $("map-toggle").addEventListener("click", toggleMap);
+  $("coast-btn").addEventListener("click", jumpToNearestStation);
   $("sum-locate").addEventListener("click", showOnMap);
   $("sum-name").addEventListener("click", showOnMap);
   $("sum-name").addEventListener("keydown", (e) => {
@@ -170,9 +216,30 @@ async function init() {
   });
   $("sum-heart").addEventListener("click", toggleFavourite);
   $("locate").addEventListener("click", locateMe);
+  $("hint-ok").addEventListener("click", dismissHint);
+  $("hint-scrim").addEventListener("click", dismissHint);
+  window.addEventListener("scroll", repositionHint, { passive: true });
+  window.addEventListener("resize", repositionHint);
+  window.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    if (activeHint) dismissHint();
+    else if (!$("debug-overlay").classList.contains("hidden")) closeDebug();
+  });
   $("info-close").addEventListener("click", closeInfo);
   $("info-overlay").addEventListener("click", (e) => {
     if (e.target === $("info-overlay")) closeInfo();
+  });
+  const hotspot = $("debug-hotspot");
+  hotspot.addEventListener("pointerdown", startDebugHold);
+  hotspot.addEventListener("pointerup", cancelDebugHold);
+  hotspot.addEventListener("pointerleave", cancelDebugHold);
+  hotspot.addEventListener("pointercancel", cancelDebugHold);
+  hotspot.addEventListener("contextmenu", (e) => e.preventDefault());
+  $("debug-clear-hints").addEventListener("click", clearFirstRunHints);
+  $("debug-clear-all").addEventListener("click", clearAllData);
+  $("debug-close").addEventListener("click", closeDebug);
+  $("debug-overlay").addEventListener("click", (e) => {
+    if (e.target === $("debug-overlay")) closeDebug();
   });
   const brand = $("brand");
   brand.addEventListener("pointerdown", startInfoHold);
@@ -225,6 +292,122 @@ async function init() {
 
   loadFavourites();
   renderFavourites();
+
+  // Cold first run: offer the opening hint once everything above is wired.
+  maybeHint();
+}
+
+// ---------------------------------------------------------------------------
+// first-run hints (the engine for HINTS above)
+
+function isVisible(el) {
+  return !!el && !el.classList.contains("hidden") && el.offsetParent !== null;
+}
+
+function loadSeenHints() {
+  try {
+    const raw = localStorage.getItem(HINTS_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    return Array.isArray(list) ? list : [];
+  } catch {
+    return [];
+  }
+}
+
+function markHintSeen(id) {
+  try {
+    const seen = loadSeenHints();
+    if (!seen.includes(id)) seen.push(id);
+    localStorage.setItem(HINTS_KEY, JSON.stringify(seen));
+  } catch {
+    /* storage unavailable — the hint may show again this session, harmless */
+  }
+}
+
+let activeHint = null;
+
+// Offer the first hint whose target is on screen and which has not been shown
+// before. Called from the flow at the points where a hint's subject becomes
+// reachable; a no-op when a hint is already up.
+function maybeHint() {
+  if (activeHint) return;
+  // Never interrupt the developer overlay (its "clear" actions can make a hint
+  // eligible again; it should wait until the overlay is closed).
+  if (!$("debug-overlay").classList.contains("hidden")) return;
+  const seen = loadSeenHints();
+  for (const h of HINTS) {
+    if (seen.includes(h.id)) continue;
+    const target = h.anchor();
+    if (!target) continue; // its turn has not come yet — try again later
+    showHint(h, target);
+    return;
+  }
+}
+
+function showHint(hint, target) {
+  activeHint = hint;
+  const layer = $("hint-layer");
+  const ring = $("hint-ring");
+  const bubble = $("hint-bubble");
+  const text = $("hint-text");
+  const step = $("hint-step");
+  const idx = HINTS.findIndex((h) => h.id === hint.id);
+  text.textContent = hint.text;
+  step.textContent = `${idx + 1} of ${HINTS.length}`;
+  layer.classList.remove("hidden");
+  // Bring the target into view first (its anchor may be below the fold), then
+  // place the ring and bubble against where it actually landed.
+  target.scrollIntoView({ block: "center", behavior: "instant" });
+  positionHint(target, ring, bubble);
+  $("hint-ok").focus({ preventScroll: true });
+  trackEvent(`hint-${hint.id}`);
+}
+
+// Place the spotlight ring over the target and the bubble below (or above) it,
+// keeping both inside the viewport. Re-run on scroll/resize while open.
+function positionHint(target, ring, bubble) {
+  const pad = 6;
+  const r = target.getBoundingClientRect();
+  ring.style.top = `${r.top - pad}px`;
+  ring.style.left = `${r.left - pad}px`;
+  ring.style.width = `${r.width + pad * 2}px`;
+  ring.style.height = `${r.height + pad * 2}px`;
+  ring.classList.toggle("flat", r.width > window.innerWidth * 0.7);
+
+  const margin = 10;
+  const bw = bubble.offsetWidth;
+  const bh = bubble.offsetHeight;
+  let left = r.left + r.width / 2 - bw / 2;
+  left = Math.max(margin, Math.min(left, window.innerWidth - bw - margin));
+  // Prefer below the target; fall back to above; if neither fits (a tall
+  // target), pin to whichever side has more room and clamp into the viewport.
+  let top = r.bottom + margin;
+  if (top + bh > window.innerHeight - margin) top = r.top - bh - margin;
+  top = Math.max(margin, Math.min(top, window.innerHeight - bh - margin));
+  bubble.style.left = `${left}px`;
+  bubble.style.top = `${top}px`;
+}
+
+function dismissHint() {
+  if (!activeHint) return;
+  markHintSeen(activeHint.id);
+  activeHint = null;
+  $("hint-layer").classList.add("hidden");
+  // One action can make the next hint eligible too (search reveals the map,
+  // so "jump" and "map-tap" can both become true at once); chain to it rather
+  // than waiting for another event.
+  setTimeout(maybeHint, 0);
+}
+
+// Keep the spotlight glued to its target while the page moves under it.
+function repositionHint() {
+  if (!activeHint) return;
+  const target = activeHint.anchor();
+  if (!target) {
+    dismissHint();
+    return;
+  }
+  positionHint(target, $("hint-ring"), $("hint-bubble"));
 }
 
 // ---------------------------------------------------------------------------
@@ -245,17 +428,69 @@ function toggleMap() {
 
 function showOnMap() {
   if (!currentPoint) return;
+  const { latitude: lat, longitude: lon } = currentPoint;
+  revealMapAt(lat, lon, 14);
+}
+
+// Locate a searched point on the map: reveal the map, pan to the point and
+// drop the pin. No tide is fetched — the reader taps the map for that.
+function locateOnMap(lat, lon) {
+  // Decide the station offer first, so that when the map is revealed the hint
+  // pass sees the "jump to nearest sea" button (which ranks before the map-tap
+  // hint) rather than defaulting to the map.
+  updateStationOffer(lat, lon);
+  revealMapAt(lat, lon, 14);
+  // No tide for a located point: clear any result already on screen.
+  $("summary").classList.add("hidden");
+  $("result").classList.add("hidden");
+  setSearchError("");
+  setStatus("");
+}
+
+// Offer a one-tap jump to the nearest place that actually has a tide, so a
+// search for an inland or vague place still lands somewhere answerable. Hidden
+// when the point is already at (or very near) a station.
+function updateStationOffer(lat, lon) {
+  const row = $("coast-row");
+  const btn = $("coast-btn");
+  const status = $("coast-status");
+  status.textContent = "";
+  btn.disabled = false;
+  const near = stations.length ? nearestStation({ latitude: lat, longitude: lon }, stations) : null;
+  if (!near || near.distanceKm <= MAX_STATION_DISTANCE_KM) {
+    row.classList.add("hidden");
+    return;
+  }
+  stationOffer = near;
+  btn.textContent = `Jump to ${near.name} (${km(near.distanceKm)} away)`;
+  row.classList.remove("hidden");
+  // Now that the jump is offered, point it out (once).
+  maybeHint();
+}
+
+// Move the map to the nearest station offered for the located point. The tide
+// is still loaded by tapping the map, so the reader sees where it came from.
+function jumpToNearestStation() {
+  if (!stationOffer) return;
+  trackEvent("station-jump");
+  const { latitude: lat, longitude: lon, name, distanceKm } = stationOffer;
+  revealMapAt(lat, lon, 13);
+  $("coast-status").textContent = `${name} — the nearest place with a tide (${km(distanceKm)}). Tap the map to read it.`;
+}
+
+function revealMapAt(lat, lon, zoom) {
   const card = $("map-card");
   if (card.classList.contains("hidden")) {
     card.classList.remove("hidden");
     $("map-toggle").setAttribute("aria-expanded", "true");
   }
   initMap();
-  const { latitude: lat, longitude: lon } = currentPoint;
-  map.setView([lat, lon], 14);
+  map.setView([lat, lon], zoom);
   placeMarker(lat, lon);
   requestAnimationFrame(() => map && map.invalidateSize());
   card.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  // The map is on screen: if the reader has not yet tapped it for a tide, hint.
+  maybeHint();
 }
 
 function initMap() {
@@ -365,7 +600,17 @@ async function onSubmit(e) {
   lastSearchMs = now;
   abort();
   hideChoices();
+  // A search locates a point on the map and does not load a tide, so any
+  // previous result (the summary card and the surge/provenance block) is
+  // cleared until the reader taps the map. The map card is cleared too, so a
+  // failed lookup leaves just the message under the search bar rather than a
+  // stale pin from the last search.
   $("result").classList.add("hidden");
+  $("summary").classList.add("hidden");
+  $("map-card").classList.add("hidden");
+  $("map-toggle").setAttribute("aria-expanded", "false");
+  $("coast-row").classList.add("hidden");
+  stationOffer = null;
   setSearchError("");
   setStatus(`Looking up “${q}”…`);
 
@@ -374,18 +619,24 @@ async function onSubmit(e) {
     const lat = Number(coord[1]);
     const lon = Number(coord[2]);
     if (Math.abs(lat) <= 90 && Math.abs(lon) <= 180) {
-      setZone("UTC");
-      placeLabel = `${lat.toFixed(4)}, ${lon.toFixed(4)} (coordinates — UTC shown)`;
       trackEvent("search-coords");
-      await load({ latitude: lat, longitude: lon });
+      setStatus("");
+      locateOnMap(lat, lon);
       return;
     }
   }
 
   trackEvent("search-name");
+  // Ask the GeoNames-backed geocoder for Irish matches first — this is an
+  // Irish tide tool, so "Galway" should mean Galway. The worldwide list is
+  // fetched as well so the alternatives are still offered, not hidden.
   let geo;
+  let world;
   try {
-    geo = await geocode(q, { signal: controller.signal });
+    [geo, world] = await Promise.all([
+      geocode(q, { countryCode: "IE", signal: controller.signal }),
+      geocode(q, { signal: controller.signal }),
+    ]);
   } catch (err) {
     if (err.name === "AbortError") return;
     trackEvent("error-geocode");
@@ -393,15 +644,17 @@ async function onSubmit(e) {
     setSearchError(`Could not look up “${q}”: ${err.message}`);
     return;
   }
-  if (!geo.results.length) {
+  if (!geo.results.length && !world.results.length) {
     setStatus("");
     setSearchError(`No place found for “${q}”.`);
     return;
   }
   // Prefer Ireland, but show the alternatives rather than silently choosing.
+  // Merge the Irish-biased list ahead of the worldwide one (Irish first, then
+  // the rest, de-duplicated) so the reader sees Ireland at the top.
   // GeoNames misses many Irish townlands (e.g. "Cahore" only resolves to
   // Ontario), so when there is no Irish match, merge in Photon (OSM) results.
-  let results = geo.results;
+  let results = mergeGeoResults(geo.results, world.results);
   if (!results.some((r) => r.countryCode === "IE")) {
     try {
       const photon = await photonSearch(q, { signal: controller.signal });
@@ -414,34 +667,25 @@ async function onSubmit(e) {
       /* keep the Open-Meteo results on a Photon failure */
     }
   }
+  // Ireland always ranks first, regardless of which source supplied the match.
+  results = sortByIreland(results);
   geoResults = results;
   if (results.length > 1) trackEvent("geocode-ambiguous");
   const def = results.find((r) => r.countryCode === "IE") || results[0];
   showChoices(results, def);
-  // First result chosen automatically, but keep the alternatives on screen so
-  // the reader can pick a different match (requirement: show the alternatives
-  // rather than silently choosing).
-  await choose(def, { keepChoices: true });
+  // A search locates a position on the map and nothing more; the tide loads
+  // when the reader taps the map. Keep the alternatives on screen so a
+  // different match can be picked.
+  choose(def);
 }
 
-async function choose(r, { fromChip = false, keepChoices = false } = {}) {
-  abort();
-  let tz = r.timezone || "UTC";
-  if (!r.timezone) {
-    // Photon results carry no timezone; resolve it from the point so the
-    // display stays in local time (requirement 11).
-    try {
-      tz = (await timezoneAt(r, { signal: controller.signal })).timezone;
-    } catch {
-      tz = "UTC";
-    }
-  }
+// Pick a geocoder result: move the map there and drop the pin, without
+// loading a tide. `fromChip` is a tap on one of the alternatives.
+function choose(r, { fromChip = false } = {}) {
   if (fromChip) hideChoices();
   else showChoices(geoResults, r);
-  await loadPoint(
-    { latitude: r.latitude, longitude: r.longitude },
-    { zone: tz, label: `${r.name}, ${r.admin1 ?? r.country}`, keepChoices },
-  );
+  placeLabel = `${r.name}, ${r.admin1 ?? r.country}`;
+  locateOnMap(r.latitude, r.longitude);
 }
 
 async function load(point) {
@@ -495,15 +739,16 @@ async function load(point) {
 }
 
 // Shared preamble for resolving a point: cancel any in-flight request, clear
-// the previous choices and result, apply the place's label and timezone, and
-// load. Callers that need the timezone before loading still call abort() first
-// (a second abort is harmless).
-function loadPoint(point, { zone: tz, label, keepChoices = false } = {}) {
+// the previous choices and any search error, apply the place's label and
+// timezone, and load. Callers that need the timezone before loading still call
+// abort() first (a second abort is harmless).
+function loadPoint(point, { zone: tz, label } = {}) {
   abort();
-  // Keep the alternatives list on screen when the load came from a name
-  // search; a map pick, a geolocate or a favourite open replaces the location
-  // entirely, so those clear it.
-  if (!keepChoices) hideChoices();
+  hideChoices();
+  // A tide is being loaded for this point, so the "jump to a station" offer
+  // for a previously located point no longer applies.
+  $("coast-row").classList.add("hidden");
+  stationOffer = null;
   $("result").classList.add("hidden");
   setSearchError("");
   if (tz) setZone(tz);
@@ -657,6 +902,15 @@ function mergeGeoResults(a, b) {
     out.push(r);
   }
   return out;
+}
+
+// Ireland first, then everything else in the order the geocoder gave it. This
+// is an Irish tide tool: an Irish match should be the one the map jumps to and
+// the one the alternatives list leads with, without hiding the rest.
+function sortByIreland(results) {
+  return [...results].sort(
+    (a, b) => (b.countryCode === "IE" ? 1 : 0) - (a.countryCode === "IE" ? 1 : 0),
+  );
 }
 
 function setStatus(msg) {
@@ -967,6 +1221,8 @@ function renderFavourites() {
     li.append(go, rename, remove);
     list.appendChild(li);
   }
+  // With a saved favourite on screen, point out the rename pencil (once).
+  maybeHint();
 }
 
 function beginRename(li, f) {
@@ -1036,6 +1292,74 @@ function versionText() {
 }
 
 // ---------------------------------------------------------------------------
+// developer overlay (long-press the top-right corner of the info panel)
+//
+// A hidden door for testing device state without devtools: it can clear the
+// first-run hints (so the coachmarks show again) or wipe every localStorage
+// key this app owns. Nothing here talks to a source; it only touches the
+// device's own stored state.
+
+const LOCAL_KEYS = [THEME_KEY, FAVOURITES_KEY, HINTS_KEY];
+
+let debugHoldTimer = null;
+
+function startDebugHold() {
+  cancelDebugHold();
+  debugHoldTimer = setTimeout(openDebug, 3000);
+}
+
+function cancelDebugHold() {
+  if (debugHoldTimer) {
+    clearTimeout(debugHoldTimer);
+    debugHoldTimer = null;
+  }
+}
+
+function openDebug() {
+  closeInfo();
+  setDebugNote("Local data on this device.");
+  $("debug-overlay").classList.remove("hidden");
+}
+
+function closeDebug() {
+  $("debug-overlay").classList.add("hidden");
+  // A clear action may have made a hint eligible again; offer it now the
+  // overlay is out of the way (a no-op when every hint is already seen).
+  maybeHint();
+}
+
+function setDebugNote(msg) {
+  $("debug-note").textContent = msg;
+}
+
+// Clear one or more of our own localStorage keys, then re-apply the state so
+// the change is visible without a manual reload.
+function clearLocalKeys(keys) {
+  for (const k of keys) {
+    try {
+      localStorage.removeItem(k);
+    } catch {
+      /* storage unavailable — nothing to clear */
+    }
+  }
+}
+
+function clearFirstRunHints() {
+  clearLocalKeys([HINTS_KEY]);
+  setDebugNote("First-run hints cleared — they will show again.");
+}
+
+function clearAllData() {
+  clearLocalKeys(LOCAL_KEYS);
+  // Put the app back to a cold state: theme to the device default, empty
+  // favourites, no hints seen.
+  initTheme();
+  loadFavourites();
+  renderFavourites();
+  setDebugNote("All local data cleared.");
+}
+
+// ---------------------------------------------------------------------------
 // summary panel
 
 // Catmull-Rom spline through the points as cubic Béziers, so the curve bends
@@ -1094,6 +1418,10 @@ function renderSummary() {
       return el;
     });
   $("sum-turns").replaceChildren(...turnBlocks);
+
+  // The summary is now on screen, so the heart (and anything below it) can be
+  // pointed out if it has not been seen yet.
+  maybeHint();
 }
 
 function summaryTurnText(label, t, hasODM) {

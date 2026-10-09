@@ -153,10 +153,17 @@ function defaultWindows(w = {}, now = new Date()) {
 // ---------------------------------------------------------------------------
 // Geocoding (Open-Meteo, GeoNames-derived)
 
-export async function geocode(query, { language = "en", count = 5, signal } = {}) {
+/**
+ * Geocode a place name. `countryCode` biases the result set towards one
+ * country (the API's own `countryCode` filter); the caller passes "IE" so an
+ * Irish search resolves to an Irish place first, while a `null` still returns
+ * the worldwide alternatives to fall back on.
+ */
+export async function geocode(query, { language = "en", count = 5, countryCode = null, signal } = {}) {
   const url =
     `${GEOCODE}?name=${encodeURIComponent(query)}` +
-    `&count=${count}&language=${language}&format=json`;
+    `&count=${count}&language=${language}&format=json` +
+    (countryCode ? `&countryCode=${encodeURIComponent(countryCode)}` : "");
   const { data, fetchedAt } = await fetchJson(url, signal);
   return {
     source: "open-meteo-geocoding",
