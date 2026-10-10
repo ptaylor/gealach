@@ -1346,6 +1346,7 @@ function beginRename(li, f) {
 
 function goFavourite(f) {
   trackEvent("favourite-open");
+  scrollToTop();
   loadPoint(
     { latitude: f.latitude, longitude: f.longitude },
     { zone: f.timezone || "UTC", label: f.name },
@@ -1357,6 +1358,14 @@ function goFavourite(f) {
 function showFavouriteOnMap(f) {
   trackEvent("favourite-map");
   revealMapAt(f.latitude, f.longitude, 14);
+  // After revealMapAt's own scrollIntoView, so the top of the page wins.
+  scrollToTop();
+}
+
+// Opening a favourite answers with the summary/map near the top of the page, so
+// bring the reader back there rather than leaving them scrolled to the list.
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 // ---------------------------------------------------------------------------
