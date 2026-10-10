@@ -1358,10 +1358,16 @@ function goFavourite(f) {
 }
 
 // Open the map at a favourite without loading a tide — the same contract as the
-// summary card's "Show on map": the reader taps the map to read it there.
+// summary card's "Show on map": the reader taps the map to read it there. The
+// previous tide panel is cleared, since it was not for this point.
 function showFavouriteOnMap(f) {
   trackEvent("favourite-map");
+  updateStationOffer(f.latitude, f.longitude);
   revealMapAt(f.latitude, f.longitude, 14);
+  $("summary").classList.add("hidden");
+  $("result").classList.add("hidden");
+  setSearchError("");
+  setStatus("");
   // After revealMapAt's own scrollIntoView, so the top of the page wins.
   scrollToTop();
 }
