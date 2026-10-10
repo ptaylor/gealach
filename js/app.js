@@ -244,7 +244,11 @@ async function init() {
   });
   const brand = $("brand");
   brand.addEventListener("pointerdown", startInfoHold);
-  brand.addEventListener("pointerup", cancelInfoHold);
+  brand.addEventListener("pointerup", () => {
+    // cancelInfoHold() reports whether the hold had already fired — if it had,
+    // this pointerup was the end of the long-press, not a tap.
+    if (!cancelInfoHold()) resetToHome();
+  });
   brand.addEventListener("pointerleave", cancelInfoHold);
   brand.addEventListener("pointercancel", cancelInfoHold);
   brand.addEventListener("contextmenu", (e) => e.preventDefault());
@@ -748,6 +752,10 @@ async function load(point) {
       if (omRes.status === "rejected" && omRes.reason && omRes.reason.name === "AbortError") {
         throw omRes.reason;
       }
+      // A failed source is worth counting on its own: which API is down, and
+      // how often, is the thing that says whether this is a blip or a pattern.
+      if (!marine) trackEvent("error-marine-ie");
+      if (!om) trackEvent("error-open-meteo");
       if (!marine && !om) {
         throw marineRes.reason || omRes.reason;
       }
@@ -763,7 +771,12 @@ async function load(point) {
       }
     } else {
       setStatus("Fetching the tide from the Open-Meteo model…");
-      tideResult = await withDeadline(openMeteoMarine(point, { signal: controller.signal }));
+      try {
+        tideResult = await withDeadline(openMeteoMarine(point, { signal: controller.signal }));
+      } catch (err) {
+        if (err.name !== "AbortError") trackEvent("error-open-meteo");
+        throw err;
+      }
       currentResult = tideResult;
     }
 
@@ -780,7 +793,8 @@ async function load(point) {
               signal: controller.signal,
             }),
           );
-        } catch {
+        } catch (err) {
+          if (err.name !== "AbortError") trackEvent("error-surge");
           surgeResult = null;
         }
       }
@@ -1346,6 +1360,7 @@ function beginRename(li, f) {
 
 function goFavourite(f) {
   trackEvent("favourite-open");
+  scrollToTop();
   loadPoint(
     { latitude: f.latitude, longitude: f.longitude },
     { zone: f.timezone || "UTC", label: f.name },
@@ -1353,27 +1368,53 @@ function goFavourite(f) {
 }
 
 // Open the map at a favourite without loading a tide — the same contract as the
-// summary card's "Show on map": the reader taps the map to read it there.
+// summary card's "Show on map": the reader taps the map to read it there. The
+// previous tide panel is cleared, since it was not for this point.
 function showFavouriteOnMap(f) {
   trackEvent("favourite-map");
+  updateStationOffer(f.latitude, f.longitude);
   revealMapAt(f.latitude, f.longitude, 14);
+  $("summary").classList.add("hidden");
+  $("result").classList.add("hidden");
+  setSearchError("");
+  setStatus("");
+  // After revealMapAt's own scrollIntoView, so the top of the page wins.
+  scrollToTop();
+}
+
+// Opening a favourite answers with the summary/map near the top of the page, so
+// bring the reader back there rather than leaving them scrolled to the list.
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 // ---------------------------------------------------------------------------
 // about overlay (long-press the title/icon)
+//
+// The title has two gestures: a quick tap resets the page to the home view
+// (search + favourites, with the search field cleared), and an 800 ms hold
+// opens the about panel. The hold timer decides which; a pointerup that lands
+// before it fires is the tap.
 
 let infoHoldTimer = null;
 
 function startInfoHold() {
   cancelInfoHold();
-  infoHoldTimer = setTimeout(openInfo, 800);
+  infoHoldTimer = setTimeout(() => {
+    infoHoldTimer = null;
+    openInfo();
+  }, 800);
 }
 
+// Returns true when the hold had already fired (so the pointerup must not also
+// be treated as a tap).
 function cancelInfoHold() {
   if (infoHoldTimer) {
     clearTimeout(infoHoldTimer);
     infoHoldTimer = null;
+    return false;
   }
+  return true;
 }
 
 function openInfo() {
@@ -1383,6 +1424,38 @@ function openInfo() {
 
 function closeInfo() {
   $("info-overlay").classList.add("hidden");
+}
+
+// A quick tap on the title: return to the home view — the search bar (cleared)
+// and the favourites list, with the map, tide, alternatives and any message
+// folded away. A no-op when the page is already home, so a stray tap on the
+// title does not disturb a reader who has not gone anywhere.
+function resetToHome() {
+  const somethingShowing =
+    !$("map-card").classList.contains("hidden") ||
+    !$("summary").classList.contains("hidden") ||
+    !$("result").classList.contains("hidden") ||
+    !$("choices").classList.contains("hidden") ||
+    !$("status").classList.contains("hidden") ||
+    !$("search-error").classList.contains("hidden");
+  if (!somethingShowing) return;
+
+  trackEvent("title-reset");
+  abort();
+  currentPoint = null;
+  placeLabel = "";
+  $("q").value = "";
+  hideChoices();
+  setSearchError("");
+  setStatus("");
+  clearFetchError();
+  $("map-card").classList.add("hidden");
+  $("map-toggle").setAttribute("aria-expanded", "false");
+  $("coast-row").classList.add("hidden");
+  stationOffer = null;
+  $("summary").classList.add("hidden");
+  $("result").classList.add("hidden");
+  scrollToTop();
 }
 
 function versionText() {
