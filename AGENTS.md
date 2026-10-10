@@ -513,7 +513,8 @@ Update this section in the same commit that adds or upgrades a dependency.
     `distance-local|warned|global`;
     surge `surge-shown|none`; switches `switch-marine|openmeteo`,
     `datum-lat|odm`; engagement `details-open`, `map-open`,
-    `favourite-add|open|rename|remove`, `install-shown`, `installed`,
+    `favourite-add|open|rename|remove`, `favourite-map` (a favourite shown on
+    the map without loading its tide), `install-shown`, `installed`,
     `station-jump` (the offer to reach the nearest prediction station from a
     located inland point), `hint-search|jump|map-tap|heart|details|rename` (a
     first-run coachmark was shown);
