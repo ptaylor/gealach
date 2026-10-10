@@ -46,6 +46,11 @@ not called. Where a candidate source was *not* verified, it says so (see
    is not a tide gauge. Both are shown, never glossed.
 5. **Extend beyond Ireland** without rewriting the interface — a new region is
    a new source adapter, not a new page.
+6. **Return home with one tap.** A quick tap on the title clears everything
+   back to the home view — the search bar (emptied) and the favourites — since
+   the reader's working state otherwise has no way back. It is a no-op when
+   already home, so a stray tap disturbs nothing. (An 800 ms hold on the same
+   title opens the about panel; the hold timer tells the two gestures apart.)
 
 ### Non-goals
 
@@ -514,7 +519,8 @@ Update this section in the same commit that adds or upgrades a dependency.
     surge `surge-shown|none`; switches `switch-marine|openmeteo`,
     `datum-lat|odm`; engagement `details-open`, `map-open`,
     `favourite-add|open|rename|remove`, `favourite-map` (a favourite shown on
-    the map without loading its tide), `install-shown`, `installed`,
+    the map without loading its tide), `title-reset` (a tap on the title
+    returned the page to the home view), `install-shown`, `installed`,
     `station-jump` (the offer to reach the nearest prediction station from a
     located inland point), `hint-search|jump|map-tap|heart|details|rename` (a
     first-run coachmark was shown);

@@ -244,7 +244,11 @@ async function init() {
   });
   const brand = $("brand");
   brand.addEventListener("pointerdown", startInfoHold);
-  brand.addEventListener("pointerup", cancelInfoHold);
+  brand.addEventListener("pointerup", () => {
+    // cancelInfoHold() reports whether the hold had already fired — if it had,
+    // this pointerup was the end of the long-press, not a tap.
+    if (!cancelInfoHold()) resetToHome();
+  });
   brand.addEventListener("pointerleave", cancelInfoHold);
   brand.addEventListener("pointercancel", cancelInfoHold);
   brand.addEventListener("contextmenu", (e) => e.preventDefault());
@@ -1370,19 +1374,31 @@ function scrollToTop() {
 
 // ---------------------------------------------------------------------------
 // about overlay (long-press the title/icon)
+//
+// The title has two gestures: a quick tap resets the page to the home view
+// (search + favourites, with the search field cleared), and an 800 ms hold
+// opens the about panel. The hold timer decides which; a pointerup that lands
+// before it fires is the tap.
 
 let infoHoldTimer = null;
 
 function startInfoHold() {
   cancelInfoHold();
-  infoHoldTimer = setTimeout(openInfo, 800);
+  infoHoldTimer = setTimeout(() => {
+    infoHoldTimer = null;
+    openInfo();
+  }, 800);
 }
 
+// Returns true when the hold had already fired (so the pointerup must not also
+// be treated as a tap).
 function cancelInfoHold() {
   if (infoHoldTimer) {
     clearTimeout(infoHoldTimer);
     infoHoldTimer = null;
+    return false;
   }
+  return true;
 }
 
 function openInfo() {
@@ -1392,6 +1408,38 @@ function openInfo() {
 
 function closeInfo() {
   $("info-overlay").classList.add("hidden");
+}
+
+// A quick tap on the title: return to the home view — the search bar (cleared)
+// and the favourites list, with the map, tide, alternatives and any message
+// folded away. A no-op when the page is already home, so a stray tap on the
+// title does not disturb a reader who has not gone anywhere.
+function resetToHome() {
+  const somethingShowing =
+    !$("map-card").classList.contains("hidden") ||
+    !$("summary").classList.contains("hidden") ||
+    !$("result").classList.contains("hidden") ||
+    !$("choices").classList.contains("hidden") ||
+    !$("status").classList.contains("hidden") ||
+    !$("search-error").classList.contains("hidden");
+  if (!somethingShowing) return;
+
+  trackEvent("title-reset");
+  abort();
+  currentPoint = null;
+  placeLabel = "";
+  $("q").value = "";
+  hideChoices();
+  setSearchError("");
+  setStatus("");
+  clearFetchError();
+  $("map-card").classList.add("hidden");
+  $("map-toggle").setAttribute("aria-expanded", "false");
+  $("coast-row").classList.add("hidden");
+  stationOffer = null;
+  $("summary").classList.add("hidden");
+  $("result").classList.add("hidden");
+  scrollToTop();
 }
 
 function versionText() {
