@@ -450,6 +450,7 @@ Two platform traps to remember, both of which cost an afternoon if forgotten:
 | `data/station-map.json` | The name mapping between the three spellings: `{ prediction, gauge, surge }` per station. Hand-checked, not guessed. |
 | `tools/refresh-stations.sh` | Regenerates `data/stations.json` from ERDDAP (`curl` + `jq`). |
 | `tools/make-icons.sh` | Rasterises `icons/icon.svg` with ImageMagick. |
+| `report/goatcounter-report.py` | Fetches the GoatCounter stats and writes a self-contained HTML report with embedded charts (development only; see `report/README.md`). |
 | `publish.sh` | Stamps the version, tags the release, and publishes a fixed file whitelist to the `public` branch; `main` is never published directly. |
 | `test/` | `node --test` units for `js/tide.js` and `js/sources.js`, with recorded fixtures. |
 | `docs/data-sources.md` | The source contract: endpoints, variables, datums, licences, sample responses. |
@@ -465,6 +466,7 @@ Two platform traps to remember, both of which cost an afternoon if forgotten:
 | Unit tests | `npm test` (which is `node --test`, no dependencies) |
 | Refresh station list | `./tools/refresh-stations.sh` |
 | Regenerate icons | `./tools/make-icons.sh` |
+| Build the analytics report | `report/.venv/bin/python report/goatcounter-report.py --period "this month"` (see `report/README.md`; needs its own venv and a `GOATCOUNTER_API_TOKEN` in `.env.sh`) |
 | Publish to GitHub Pages | `./publish.sh` (stamps the version in `index.html` and bumps the service-worker cache version in `sw.js`, tags `vX.(Y+1)`, pushes main + tag + the `public` branch; Pages must be set to the `public` branch root once) |
 | Check a source by hand | see the recorded queries under *Data sources* above |
 
@@ -734,12 +736,37 @@ Update this section in the same commit that adds or upgrades a dependency.
 
 ### Python 3 (development only)
 
-- **Role**: `python3 -m http.server` for a local origin.
-- **Version**: 3.14.6 here; any 3.x with `http.server` will do.
-- **Best Practices**: local dev only. It writes nothing, so it leaves no cache
-  directories to ignore — and remember it is not a secure context for anything
-  but `localhost`.
+- **Role**: `python3 -m http.server` for a local origin, and the GoatCounter
+  report (`report/goatcounter-report.py`, which needs its own venv).
+- **Version**: 3.14.6 here; any 3.x with `http.server` will do. The report
+  needs `requests`, `pandas` and `matplotlib` (see below).
+- **Best Practices**: local dev only. `http.server` writes nothing; the report
+  writes to `reports/` and `report/.venv/`, both git-ignored. Remember
+  `localhost` is the only secure context Python's server gives.
 - **Docs**: <https://docs.python.org/3/library/http.server.html>
+
+### GoatCounter report (development only: `requests`, `pandas`, `matplotlib`)
+
+- **Role**: fetch the GoatCounter stats for a period and write a
+  self-contained HTML report with embedded charts, plus `data.json`. A sibling
+  of `foighne/report/goatcounter-report.py` — same shape, Gealach's event
+  vocabulary.
+- **Version**: `requests` ≥ 2.32, `pandas` ≥ 2.2, `matplotlib` ≥ 3.9, in a venv
+  at `report/.venv/` (git-ignored). `pandas`/`matplotlib` are optional: without
+  them the script still writes the HTML and JSON, only without charts.
+- **Best Practices**:
+  - The API token lives in `.env.sh` (`GOATCOUNTER_API_TOKEN`), which is
+    git-ignored; a value already in the environment wins, with a warning when
+    the two disagree (the usual cause of a confusing 401/404).
+  - Uses the **stats** API (`/api/v0/stats/total`, `/stats/hits`, …), which
+    supports date ranges; the **export** API does not.
+  - Generated output under `reports/` is git-ignored — the script and its
+    README are the only committed parts.
+  - Read the event vocabulary from this file: the KPIs are grouped into entry,
+    source, distance, surge, engagement, hints and failures, and a slug this
+    file does not list is simply not counted.
+- **Docs**: <https://www.goatcounter.com/api.html> ·
+  <https://matplotlib.org/> · <https://pandas.pydata.org/>
 
 ### ImageMagick (`magick`) — development only
 

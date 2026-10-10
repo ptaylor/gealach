@@ -12,6 +12,18 @@ pnpm-debug.log*
 *.env
 .env.local
 *.log
+# The GoatCounter report reads GOATCOUNTER_API_TOKEN from here (a secret).
+.env.sh
+
+# Python (development only) — the report tool. Its venv and bytecode are local;
+# report/README.md and report/goatcounter-report.py are source and committed.
+__pycache__/
+*.py[cod]
+report/.venv/
+.python-version
+
+# Generated report output — regenerated on demand, not committed.
+reports/
 
 # Editor and OS metadata
 .DS_Store
