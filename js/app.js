@@ -752,6 +752,10 @@ async function load(point) {
       if (omRes.status === "rejected" && omRes.reason && omRes.reason.name === "AbortError") {
         throw omRes.reason;
       }
+      // A failed source is worth counting on its own: which API is down, and
+      // how often, is the thing that says whether this is a blip or a pattern.
+      if (!marine) trackEvent("error-marine-ie");
+      if (!om) trackEvent("error-open-meteo");
       if (!marine && !om) {
         throw marineRes.reason || omRes.reason;
       }
@@ -767,7 +771,12 @@ async function load(point) {
       }
     } else {
       setStatus("Fetching the tide from the Open-Meteo model…");
-      tideResult = await withDeadline(openMeteoMarine(point, { signal: controller.signal }));
+      try {
+        tideResult = await withDeadline(openMeteoMarine(point, { signal: controller.signal }));
+      } catch (err) {
+        if (err.name !== "AbortError") trackEvent("error-open-meteo");
+        throw err;
+      }
       currentResult = tideResult;
     }
 
@@ -784,7 +793,8 @@ async function load(point) {
               signal: controller.signal,
             }),
           );
-        } catch {
+        } catch (err) {
+          if (err.name !== "AbortError") trackEvent("error-surge");
           surgeResult = null;
         }
       }

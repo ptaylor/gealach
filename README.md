@@ -14,6 +14,25 @@ running. It starts with Ireland.
 separately where published), and the modelled currents are model output. This
 notice lives in the interface, permanently.
 
+## How to use it
+
+- **Search** a place name or a latitude/longitude. A search *locates* the
+  point — it opens the map and drops a pin; it does not load a tide.
+- **Tap the map** to read the tide at that point. The tide is only ever fetched
+  for a point you can see.
+- If the point is inland or vague, the map card offers a **jump to the nearest
+  prediction station** (still no fetch — tap the map to read it).
+- **Save a spot** to your favourites with the heart. Each favourite can be
+  **opened** (loads its tide), **shown on the map** (locates it, no fetch), or
+  **renamed**.
+- **Tap the title** to return home — the search bar (cleared) and your
+  favourites — from anywhere.
+- **Hold the title** (800 ms) for the about panel. A hidden developer door
+  lives in the top-right corner of that panel (a 3-second hold).
+
+The first time you reach a feature, a short hint points it out. Hints show once
+per device.
+
 ## Run locally
 
 ```sh
@@ -61,6 +80,22 @@ The site is then served at <https://ptaylor.github.io/gealach/>.
 
 Details, endpoints, datums and the traps that were hit live in
 `docs/data-sources.md`. The formulas are in `docs/derivations.md`.
+
+## Known limitations
+
+- **Not for navigation.** In the interface permanently, not in a dismissible
+  toast.
+- **The Marine Institute is not always up.** `erddap.marine.ie` has returned
+  HTTP 504 / timed out for a full day twice in a week. When it is down the app
+  falls back, within 12 s, to the Open-Meteo **global** model and says
+  "Outside the Irish prediction stations" — a coarser answer, honestly
+  labelled, not a silent substitution.
+- **The prediction excludes storm surge.** Where the Marine Institute publishes
+  it, surge is shown separately so the two can be compared.
+- **Springs and neaps are an inference from the predicted range**, not a form
+  factor (the constituents are not published). See `docs/derivations.md`.
+- **Modelled currents are model output**, at the model's resolution, not a
+  measurement.
 
 Usage is measured with **GoatCounter** — no cookies, no personal data. Custom
 events are categorical only: the search string and picked coordinates never

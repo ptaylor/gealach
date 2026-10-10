@@ -13,21 +13,64 @@ the provisional working name was `taoidí` (*tides*) until 2026-10-05.
 
 ## Status
 
-The first implementation now exists in the repository: the app shell, the
-three ES modules, the PWA shell, the tests and the docs. The vendored station
-snapshot (`data/stations.json`) is **generated** — `tools/refresh-stations.sh`
-regenerated all 38 stations on **2026-10-07** once `erddap.marine.ie` recovered
-from the HTTP 504 it was returning on **2026-10-04**. The hand-checked key
-mapping (`data/station-map.json`) is **generated** on **2026-10-07** by matching
-the three station-list spellings against the live `distinct()` responses, so
-the surge feature now answers Irish points from the Marine Institute prediction
-and observation datasets.
+The first implementation exists and is published: the app shell, the three ES
+modules, the PWA shell, the tests and the docs. Published as **v0.10** on
+<https://ptaylor.github.io/gealach/>; `main` carries the work since. Not yet
+v1.0 — see *Towards 1.0* below.
+
+Since the first cut the app gained: search that locates a point on the map
+(a map tap loads the tide, not the search), Irish places ranked first, a
+"jump to the nearest prediction station" offer for inland points, first-run
+hints, a hidden developer door ("The Secret Rose"), a named fetch status with
+a spinner and an error card with retry, graceful fallback to the global model
+when the Marine Institute is down, a favourite "show on map" (which clears any
+stale tide panel), scroll-to-top on opening a favourite, and a quick tap on the
+title to return home.
+
+The vendored station snapshot (`data/stations.json`) is **generated** —
+`tools/refresh-stations.sh` regenerated all 38 stations on **2026-10-07**. The
+hand-checked key mapping (`data/station-map.json`) was generated the same day by
+matching the three station-list spellings against the live `distinct()`
+responses, so the surge feature answers Irish points from the Marine Institute
+prediction and observation datasets.
+
+**Known-available caveat at the time of writing:** `erddap.marine.ie` (the
+primary Irish source) was returning HTTP 504 / timing out across **2026-10-04**
+and again on **2026-10-10**. The app now degrades to the Open-Meteo global model
+within 12 s (`DEADLINE_MS`) and says so, rather than hanging — but an Irish
+point served by the global model is a coarser answer, and the interface says
+"Outside the Irish prediction stations". Check the source before trusting a
+"ships fine" against it.
 
 The research below was executed against the live services on **2026-09-30**
 (ERDDAP) and **2026-10-04** (Open-Meteo, NOAA); the observed output is
 recorded with it. Nothing in this file is aspirational about a source that was
 not called. Where a candidate source was *not* verified, it says so (see
 *Candidates, not adopted*).
+
+## Towards 1.0 — the open questions (2026-10-10)
+
+Recorded so the decision is deliberate, not drifted into:
+
+- **The Marine Institute's reliability.** The primary source has failed for a
+  full day twice in a week. v1.0 should state this as a known limitation, and
+  the fallback's honesty ("Outside the Irish prediction stations") is the
+  behaviour to judge it by.
+- **The first-run hints** are an onboarding *experiment* (see above). Decide
+  from the `hint-*` counts whether they stay, or are removed in one commit,
+  before 1.0. Cliff note: they are entirely removable by deleting `HINTS`, the
+  hint functions and the `.hint-*` CSS/markup.
+- **The "Secret Rose" debug door** is a testing aid, not a user feature. It
+  ships hidden; no action needed, but it is not part of the 1.0 promise.
+- **Reserved events** `error-no-station` and `error-out-of-window` are
+  documented but not yet fired — wire them or drop them.
+- **The old `feature/ux-review` branch was deleted unmerged** (2026-10-10) but
+  its one commit, `d5bf0f8`, carried UX ideas worth revisiting: a headline row
+  on the tide card (rising/falling, height now, rate) instead of burying the
+  state in Details; the datum and distance printed on the card next to the
+  turns; the moon glyph and current rose demoted out of the hero row; and the
+  empty Favourites card folded away. The commit is still in the reflog and on
+  GitHub for a few weeks if the work is wanted back.
 
 ## What the tool is for
 
@@ -78,6 +121,13 @@ not called. Where a candidate source was *not* verified, it says so (see
 ## Data sources — verified 2026-09-30
 
 ### Primary: Marine Institute ERDDAP (Ireland)
+
+**Availability is the weak point.** `erddap.marine.ie` returned HTTP 504 /
+timed out on 2026-10-04 and again on 2026-10-10, and (from the browser) its
+CORS preflight has failed outright while it was down. The app treats this as a
+first-class case: a 12 s deadline, then the Open-Meteo global model with a
+visible "Outside the Irish prediction stations" warning, and `error-marine-ie`
+counted per API. Never assume it is up.
 
 `https://erddap.marine.ie/erddap` — ERDDAP 2.14, no key, CORS open, data
 licensed **CC-BY 4.0**, so attribution is mandatory in the interface. 38
@@ -524,9 +574,12 @@ Update this section in the same commit that adds or upgrades a dependency.
     `station-jump` (the offer to reach the nearest prediction station from a
     located inland point), `hint-search|jump|map-tap|heart|details|rename` (a
     first-run coachmark was shown);
-    failures `error-geocode`, `error-source`. `error-no-station` and
-    `error-out-of-window` are reserved for when those failure paths become
-    explicit.
+    failures `error-geocode`, `error-marine-ie` / `error-open-meteo` /
+    `error-surge` (a named source failed — counted per API so a pattern is
+    visible, whether or not the reader was affected), `error-source` (the
+    umbrella: **no** source could answer, so the error card was shown).
+    `error-no-station` and `error-out-of-window` are reserved for when those
+    failure paths become explicit.
 - **Docs**: <https://www.goatcounter.com/> · <https://www.goatcounter.com/api.html>
 
 ### Fetch feedback (loading, timeouts, failures)
@@ -548,7 +601,9 @@ Update this section in the same commit that adds or upgrades a dependency.
     are settled apart (`Promise.allSettled`); if Marine is unreachable the
     global model answers and `source-fallback-open-meteo` fires, alongside the
     existing global-model proximity warning. Only when *both* fail is the
-    error card shown.
+    error card shown. A failed source is counted on its own —
+    `error-marine-ie` / `error-open-meteo` / `error-surge` — so a pattern in an
+    unreliable API is visible even when the reader never saw a problem.
   - **A timeout is a failure, a cancel is a cancel.** `fetchJson` throws an
     ordinary `Error` on timeout so callers can fall back; only the caller's own
     signal (the point changed) stays an `AbortError`, which aborts the load
@@ -841,7 +896,8 @@ These apply to every home project unless a project has a reason to override one.
 
 <!--
 This file was written with an AI coding assistant, and updated with one in
-2026-10-04 when the first implementation landed.
+2026-10-04 when the first implementation landed, and again on 2026-10-10 ahead
+of the v1.0 decision (status, events, gestures).
 Assisted-by: GitHub Copilot (DeepSeek V4 Flash)
 Assisted-by: GitHub Copilot (DeepSeek V4 Pro)
 -->
