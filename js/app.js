@@ -216,6 +216,7 @@ async function init() {
   });
   $("sum-heart").addEventListener("click", toggleFavourite);
   $("locate").addEventListener("click", locateMe);
+  $("retry-btn").addEventListener("click", retryFetch);
   $("hint-ok").addEventListener("click", dismissHint);
   $("hint-scrim").addEventListener("click", dismissHint);
   window.addEventListener("scroll", repositionHint, { passive: true });
@@ -688,25 +689,81 @@ function choose(r, { fromChip = false } = {}) {
   locateOnMap(r.latitude, r.longitude);
 }
 
+// Retry the last point after a fetch failure. A fresh controller first, so the
+// retried requests are not tied to a signal an earlier abort already tripped.
+function retryFetch() {
+  if (!currentPoint) return;
+  abort();
+  load(currentPoint);
+}
+
+// Bound a whole source operation by wall-clock time. Adapters may make several
+// requests (the Marine Institute's high/low and then its curve), so a per-
+// request ceiling is not enough — this caps the lot, so the app never spins
+// longer than DEADLINE_MS whatever a source does. The rejection is an ordinary
+// Error, so a caller falls back to the other source rather than treating it as
+// a cancel.
+const DEADLINE_MS = 12000;
+function withDeadline(promise) {
+  let timer;
+  const deadline = new Promise((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`source did not answer within ${DEADLINE_MS / 1000}s`)),
+      DEADLINE_MS,
+    );
+  });
+  return Promise.race([promise, deadline]).finally(() => clearTimeout(timer));
+}
+
 async function load(point) {
   currentPoint = point;
   $("details").classList.add("hidden");
   $("details-toggle").setAttribute("aria-expanded", "false");
-  setStatus("Fetching tides…");
+  clearFetchError();
+  $("result").classList.remove("hidden");
+  setStatus("Finding the nearest prediction station…");
   try {
     const near = stations.length ? nearestStation(point, stations) : null;
     const marineAvailable = !!near && near.distanceKm <= GLOBAL_MODEL_FALLBACK_KM;
     const useMarine = marineAvailable && sourceChoice !== "open-meteo";
 
+    let marine = null;
+    let om = null;
     if (useMarine) {
-      const [marine, om] = await Promise.all([
-        marineIeTides(point, {}, stations, { signal: controller.signal }),
-        openMeteoMarine(point, { signal: controller.signal }),
+      // Name the sources actually being asked, and run them together. The two
+      // are settled separately: if the Marine Institute is down we still have
+      // the global model, so one source failing should not lose the answer.
+      setStatus(`Fetching the tide from the Marine Institute and the current from Open-Meteo…`);
+      const [marineRes, omRes] = await Promise.allSettled([
+        withDeadline(marineIeTides(point, {}, stations, { signal: controller.signal })),
+        withDeadline(openMeteoMarine(point, { signal: controller.signal })),
       ]);
-      tideResult = marine;
-      currentResult = om;
+      if (marineRes.status === "fulfilled") {
+        marine = marineRes.value;
+      } else if (marineRes.reason && marineRes.reason.name === "AbortError") {
+        // A genuine cancel (the point changed) — stop the whole load.
+        throw marineRes.reason;
+      }
+      om = omRes.status === "fulfilled" ? omRes.value : null;
+      if (omRes.status === "rejected" && omRes.reason && omRes.reason.name === "AbortError") {
+        throw omRes.reason;
+      }
+      if (!marine && !om) {
+        throw marineRes.reason || omRes.reason;
+      }
+      if (!marine) {
+        // Marine Institute unreachable — fall back to the global model, and say
+        // so (the proximity warning names the global model already).
+        tideResult = om;
+        currentResult = om;
+        trackEvent("source-fallback-open-meteo");
+      } else {
+        tideResult = marine;
+        currentResult = om || marine;
+      }
     } else {
-      tideResult = await openMeteoMarine(point, { signal: controller.signal });
+      setStatus("Fetching the tide from the Open-Meteo model…");
+      tideResult = await withDeadline(openMeteoMarine(point, { signal: controller.signal }));
       currentResult = tideResult;
     }
 
@@ -714,12 +771,15 @@ async function load(point) {
     if (useMarine && stationMap) {
       const entry = stationMap[tideResult.station];
       if (entry && entry.surge) {
+        setStatus("Fetching the observed surge…");
         try {
-          surgeResult = await marineIeSurge(entry.surge, {
-            start: isoHoursAgo(24),
-            end: iso(new Date()),
-            signal: controller.signal,
-          });
+          surgeResult = await withDeadline(
+            marineIeSurge(entry.surge, {
+              start: isoHoursAgo(24),
+              end: iso(new Date()),
+              signal: controller.signal,
+            }),
+          );
         } catch {
           surgeResult = null;
         }
@@ -734,7 +794,14 @@ async function load(point) {
   } catch (err) {
     if (err.name === "AbortError") return;
     trackEvent("error-source");
-    setStatus(`Something went wrong: ${err.message}`);
+    setStatus("");
+    $("summary").classList.add("hidden");
+    const where = placeLabel ? ` for ${placeLabel}` : "";
+    setFetchError(
+      "Could not fetch the tide",
+      `We could not reach the tide source${where} just now. This is usually a ` +
+        `temporary problem with the service or your connection — please try again.`,
+    );
   }
 }
 
@@ -751,9 +818,9 @@ function loadPoint(point, { zone: tz, label } = {}) {
   stationOffer = null;
   $("result").classList.add("hidden");
   setSearchError("");
+  clearFetchError();
   if (tz) setZone(tz);
   if (label != null) placeLabel = label;
-  setStatus("Fetching tides…");
   return load(point);
 }
 
@@ -916,11 +983,26 @@ function sortByIreland(results) {
 function setStatus(msg) {
   const el = $("status");
   if (msg) {
-    el.textContent = msg;
+    $("status-text").textContent = msg;
     el.classList.remove("hidden");
   } else {
     el.classList.add("hidden");
   }
+}
+
+// A fetch failure, shown as a card with a friendly message and a retry. Unlike
+// setSearchError (a search that cannot be answered at all), this is for a
+// source that is down or an answer that could not be read, after a point has
+// already been chosen.
+function setFetchError(title, body) {
+  $("error-title").textContent = title;
+  $("error-body").textContent = body;
+  $("error-card").classList.remove("hidden");
+  $("no-data").classList.add("hidden");
+}
+
+function clearFetchError() {
+  $("error-card").classList.add("hidden");
 }
 
 // A message directly under the search bar, for a search that cannot be

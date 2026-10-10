@@ -43,12 +43,28 @@ const DAY_MS = 24 * HOUR_MS;
 
 const iso = (d) => d.toISOString();
 
+// A source that hangs (ERDDAP has returned HTTP 504 after a full minute) would
+// otherwise leave the app spinning forever. Give every request a ceiling, and
+// still honour the caller's own signal, so a slow source fails visibly and
+// quickly rather than silently.
+//
+// The timeout is a plain failure, not a cancellation: it is thrown as an
+// ordinary Error so a caller can fall back to another source. Only the
+// caller's own signal (a genuine cancel — the point changed) stays AbortError.
+const REQUEST_TIMEOUT_MS = 15000;
+
 async function fetchJson(url, signal) {
+  const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
+  const combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
   let res;
   try {
-    res = await fetch(url, { signal });
+    res = await fetch(url, { signal: combined });
   } catch (err) {
-    if (err.name === "AbortError") throw err;
+    // The caller's signal fired: a real cancellation, pass it up untouched.
+    if (signal && signal.aborted) throw new DOMException("Aborted", "AbortError");
+    if (err.name === "AbortError" || err.name === "TimeoutError") {
+      throw new Error(`timed out after ${REQUEST_TIMEOUT_MS / 1000}s fetching ${url}`);
+    }
     throw new Error(`network error fetching ${url}: ${err.message}`);
   }
   if (!res.ok) throw new Error(`HTTP ${res.status} from ${url}`);

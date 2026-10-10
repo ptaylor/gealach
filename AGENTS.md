@@ -508,7 +508,9 @@ Update this section in the same commit that adds or upgrades a dependency.
     no personal data."
   - Event vocabulary: entry `search-name|coords|geolocate|map`; geocoding
     `geocode-fallback-photon`, `geocode-ambiguous`; source
-    `source-marine-ie|open-meteo`; distance `distance-local|warned|global`;
+    `source-marine-ie|open-meteo`, `source-fallback-open-meteo` (the Marine
+    Institute was unreachable and the global model answered instead); distance
+    `distance-local|warned|global`;
     surge `surge-shown|none`; switches `switch-marine|openmeteo`,
     `datum-lat|odm`; engagement `details-open`, `map-open`,
     `favourite-add|open|rename|remove`, `install-shown`, `installed`,
@@ -519,6 +521,34 @@ Update this section in the same commit that adds or upgrades a dependency.
     `error-out-of-window` are reserved for when those failure paths become
     explicit.
 - **Docs**: <https://www.goatcounter.com/> · <https://www.goatcounter.com/api.html>
+
+### Fetch feedback (loading, timeouts, failures)
+
+- **Role**: make slow and failing sources visible rather than silent — the
+  status line names *what* is being fetched (with a spinner), and a failure is
+  a card with a friendly message and a retry.
+- **Best Practices**:
+  - **Name the source, not just "loading".** `setStatus` writes into
+    `#status-text` beside a `.spinner`; each stage says which source and which
+    product ("Fetching the tide from the Marine Institute and the current from
+    Open-Meteo…").
+  - **Bound every operation, not every request.** Adapters make several
+    requests (the Marine Institute's high/low then its curve), so a per-request
+    ceiling is not enough — a hung source would still take minutes.
+    `withDeadline()` (`DEADLINE_MS`, 12 s) caps the whole operation;
+    `sources.js` also gives each request a 15 s ceiling as a backstop.
+  - **One source down is not a failure.** The Marine Institute and Open-Meteo
+    are settled apart (`Promise.allSettled`); if Marine is unreachable the
+    global model answers and `source-fallback-open-meteo` fires, alongside the
+    existing global-model proximity warning. Only when *both* fail is the
+    error card shown.
+  - **A timeout is a failure, a cancel is a cancel.** `fetchJson` throws an
+    ordinary `Error` on timeout so callers can fall back; only the caller's own
+    signal (the point changed) stays an `AbortError`, which aborts the load
+    silently.
+  - `setFetchError`/`clearFetchError` drive the `#error-card` (a **Try again**
+    button calls `retryFetch`, which aborts first for a fresh controller);
+    `setSearchError` remains for a search that cannot be answered at all.
 ### First-run hints (coachmarks)
 
 - **Role**: a short set of coachmarks that point out the app's gestures the

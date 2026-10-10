@@ -179,12 +179,31 @@
     }
     .choices button.picked { border-color: var(--accent); color: var(--accent); font-weight: 600; }
 
-    .status { color: var(--muted); margin: 0.5rem 0; }
+    .status { display: flex; align-items: center; gap: 0.5rem; color: var(--muted); margin: 0.5rem 0; }
     .search-error { color: var(--bad); margin: 0 0 0.6rem; font-weight: 600; }
     .warning {
       background: var(--warn-bg); color: var(--warn);
       border-radius: 10px; padding: 0.6rem 0.8rem; margin: 0.5rem 0; font-weight: 600;
     }
+
+    /* Fetching indicator: a small ring spinner beside the label naming what is
+       being fetched. Sized in em so it tracks the status text. */
+    .spinner {
+      flex: none; width: 1em; height: 1em; border-radius: 50%;
+      border: 2px solid var(--border); border-top-color: var(--accent);
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) {
+      .spinner { animation-duration: 2s; }
+    }
+
+    /* Fetch failure: a distinct card with a friendly message and a retry, shown
+       instead of the summary when a source cannot answer. */
+    .error-card { border-color: var(--bad); }
+    .error-card h2 { color: var(--bad); }
+    .error-card p { margin: 0 0 0.7rem; }
+    .retry-btn { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 0.5rem 1.1rem; font-size: 0.95rem; font-weight: 600; cursor: pointer; }
 
     .card {
       background: var(--card); border: 1px solid var(--border);
@@ -426,10 +445,19 @@
     </div>
 
     <div id="offline" class="warning hidden">Offline — showing the last fetched prediction.</div>
-    <p id="status" class="status hidden" role="status"></p>
+    <p id="status" class="status hidden" role="status">
+      <span class="spinner" aria-hidden="true"></span>
+      <span id="status-text"></span>
+    </p>
 
     <section id="result" class="hidden">
       <div id="proximity-warning" class="warning hidden"></div>
+
+      <div id="error-card" class="card error-card hidden">
+        <h2 id="error-title">Could not fetch the tide</h2>
+        <p id="error-body" class="muted"></p>
+        <button id="retry-btn" class="retry-btn" type="button">Try again</button>
+      </div>
 
       <div id="no-data" class="card hidden">
         <h2 id="no-data-title">No tide prediction</h2>
