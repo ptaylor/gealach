@@ -94,6 +94,12 @@ Recorded so the decision is deliberate, not drifted into:
    the reader's working state otherwise has no way back. It is a no-op when
    already home, so a stray tap disturbs nothing. (An 800 ms hold on the same
    title opens the about panel; the hold timer tells the two gestures apart.)
+7. **Read the moment on the curve.** The summary's NOW line carries the local
+   clock time beside it, so "now" is a time and not just a position; it yields
+   when a high/low marker sits close enough to collide. The card's head also
+   carries a refresh (disabled until `REFRESH_MIN_MS`, 5 min, has passed since
+   the fetch — the tide does not change minute to minute) and an (i) that opens
+   the same about panel as the title's long-press.
 
 ### Non-goals
 
@@ -572,7 +578,8 @@ Update this section in the same commit that adds or upgrades a dependency.
     `datum-lat|odm`; engagement `details-open`, `map-open`,
     `favourite-add|open|rename|remove`, `favourite-map` (a favourite shown on
     the map without loading its tide), `title-reset` (a tap on the title
-    returned the page to the home view), `install-shown`, `installed`,
+    returned the page to the home view), `refresh` (the tide was re-fetched
+    from the summary card), `install-shown`, `installed`,
     `station-jump` (the offer to reach the nearest prediction station from a
     located inland point), `hint-search|jump|map-tap|heart|details|rename` (a
     first-run coachmark was shown);

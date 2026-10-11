@@ -172,6 +172,17 @@
     .sum-heart svg { width: 26px; height: 26px; }
     .sum-heart.saved { color: var(--moon-lit); }
 
+    /* The row of small controls in the summary head: refresh, about, save. */
+    .sum-actions { display: flex; align-items: center; gap: 0.3rem; flex: none; }
+    .sum-icon-btn {
+      display: flex; align-items: center; justify-content: center;
+      padding: 0.2rem; background: none; border: 0; color: var(--muted);
+      cursor: pointer; line-height: 1;
+    }
+    .sum-icon-btn:hover { color: var(--accent); }
+    .sum-icon-btn:disabled { opacity: 0.35; cursor: default; }
+    .sum-icon-btn:disabled:hover { color: var(--muted); }
+
     .faves { list-style: none; margin: 0; padding: 0; }
     .faves li { display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0; border-bottom: 1px solid var(--grid); }
     .faves li:last-child { border-bottom: 0; }
@@ -225,6 +236,7 @@
     .curve-line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; }
     .curve-now { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
     .curve-label { fill: var(--muted); font-size: 12px; }
+    .curve-now-time { fill: var(--accent); font-weight: 600; }
     .curve-fill { fill: var(--accent); opacity: 0.12; }
     .sum-axis { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; margin-top: -0.35rem; }
 
@@ -425,7 +437,19 @@
             <span>Show on map</span>
           </button>
         </div>
-        <button id="sum-heart" class="sum-heart" type="button" aria-label="Save to favourites" hidden>♡</button>
+        <div class="sum-actions">
+          <button id="sum-refresh" class="sum-icon-btn" type="button" aria-label="Refresh the tide" title="Refresh" disabled>
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <path fill="currentColor" d="M17.65 6.35A8 8 0 1 0 19.73 14h-2.08A6 6 0 1 1 12 6a5.96 5.96 0 0 1 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+            </svg>
+          </button>
+          <button id="sum-info" class="sum-icon-btn" type="button" aria-label="About Gealach" title="About">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+            </svg>
+          </button>
+          <button id="sum-heart" class="sum-heart" type="button" aria-label="Save to favourites" hidden>♡</button>
+        </div>
       </div>
       <div class="sum-indicators">
         <div class="sum-moon">
@@ -436,7 +460,7 @@
           <span id="sum-current-speed" class="sum-current-speed"></span>
         </div>
       </div>
-      <svg id="sum-curve" viewBox="0 0 360 150" role="img" aria-label="Tide curve"></svg>
+      <svg id="sum-curve" viewBox="0 0 360 164" role="img" aria-label="Tide curve"></svg>
       <div id="sum-axis" class="sum-axis" aria-hidden="true"></div>
       <div id="sum-turns" class="sum-turns"></div>
       <button id="details-toggle" class="details-toggle" type="button" aria-expanded="false" aria-controls="details">

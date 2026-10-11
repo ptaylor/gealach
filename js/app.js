@@ -215,6 +215,8 @@ async function init() {
     if (btn) toggleDatum();
   });
   $("sum-heart").addEventListener("click", toggleFavourite);
+  $("sum-refresh").addEventListener("click", refreshCurrent);
+  $("sum-info").addEventListener("click", openInfo);
   $("locate").addEventListener("click", locateMe);
   $("retry-btn").addEventListener("click", retryFetch);
   $("hint-ok").addEventListener("click", dismissHint);
@@ -242,6 +244,9 @@ async function init() {
   $("debug-overlay").addEventListener("click", (e) => {
     if (e.target === $("debug-overlay")) closeDebug();
   });
+  // Re-evaluate the refresh button as the freshness window passes, so it
+  // re-enables on its own without the reader having to do anything.
+  setInterval(updateRefreshButton, 30000);
   const brand = $("brand");
   brand.addEventListener("pointerdown", startInfoHold);
   brand.addEventListener("pointerup", () => {
@@ -699,6 +704,46 @@ function retryFetch() {
   if (!currentPoint) return;
   abort();
   load(currentPoint);
+}
+
+// How long a fetched prediction is treated as fresh. The refresh button is
+// disabled until this has passed, so a reader cannot hammer the sources (and
+// the tide does not change minute to minute anyway).
+const REFRESH_MIN_MS = 5 * 60 * 1000;
+
+// Re-fetch the point on screen. Guarded here as well as by the button's
+// disabled state, so a programmatic call cannot bypass the freshness window.
+function refreshCurrent() {
+  if (!currentPoint) return;
+  if (!refreshAllowed()) return;
+  trackEvent("refresh");
+  $("sum-refresh").disabled = true; // hold until the fresh render lands
+  abort();
+  load(currentPoint);
+}
+
+// Whether enough time has passed since the last successful fetch to refresh.
+function refreshAllowed() {
+  if (!tideResult || !tideResult.fetchedAt) return true;
+  return Date.now() - Date.parse(tideResult.fetchedAt) >= REFRESH_MIN_MS;
+}
+
+// Enable or disable the refresh button to match the freshness window, and say
+// in the tooltip why it is disabled.
+function updateRefreshButton() {
+  const btn = $("sum-refresh");
+  if (!btn) return;
+  const allowed = refreshAllowed();
+  btn.disabled = !allowed;
+  if (allowed) {
+    btn.title = "Refresh";
+  } else {
+    const mins = Math.max(
+      1,
+      Math.ceil((REFRESH_MIN_MS - (Date.now() - Date.parse(tideResult.fetchedAt))) / 60000),
+    );
+    btn.title = `Refreshed just now — available again in ${mins} min`;
+  }
 }
 
 // Bound a whole source operation by wall-clock time. Adapters may make several
@@ -1591,6 +1636,9 @@ function renderSummary() {
     });
   $("sum-turns").replaceChildren(...turnBlocks);
 
+  // The refresh button reflects how fresh this fetch is.
+  updateRefreshButton();
+
   // The summary is now on screen, so the heart (and anything below it) can be
   // pointed out if it has not been seen yet.
   maybeHint();
@@ -1675,6 +1723,22 @@ function drawSummaryCurve(series, now, turns) {
   const nowH = seriesHeightAt(series, nowMs);
   if (nowH != null) {
     inner += `<circle cx="${nowX.toFixed(1)}" cy="${y(nowH).toFixed(1)}" r="3.5" fill="var(--card)" stroke="var(--accent)" stroke-width="2" />`;
+  }
+
+  // The clock time of "now", placed at the foot of the NOW line. It is dropped
+  // when a high/low marker sits close enough to collide with it — the turn
+  // label already carries its own time, and two overlapping clocks help nobody.
+  const turnXs = [];
+  for (const turn of [turns.nextHigh, turns.nextLow]) {
+    if (!turn) continue;
+    const tm = Date.parse(turn.time);
+    if (tm < from || tm > to) continue;
+    turnXs.push(x(tm));
+  }
+  const MIN_LABEL_GAP = 34; // px, enough for "HH:MM" at this font size
+  const clearsTurns = turnXs.every((tx) => Math.abs(tx - nowX) > MIN_LABEL_GAP);
+  if (clearsTurns) {
+    inner += `<text class="curve-label curve-now-time" x="${nowX.toFixed(1)}" y="${H - padBottom + 11}" text-anchor="middle">${fmtClock(iso(now), zone)}</text>`;
   }
 
   for (const [letter, turn] of [["H", turns.nextHigh], ["L", turns.nextLow]]) {
