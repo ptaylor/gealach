@@ -53,8 +53,16 @@ npm test        # node --test, no dependencies
 It is a PWA. Serve it over HTTPS (GitHub Pages works; `file://` and
 `http://192.168.x.x` do not — a service worker needs a secure context).
 
-- **Android / desktop**: the browser offers an install prompt.
-- **iOS**: there is no install prompt. Use Share → *Add to Home Screen*.
+The app helps you install it, in the about panel (hold the title, or tap the
+ⓘ on the tide card) and in a one-off first-run hint:
+
+- **Android / desktop**: once the browser offers an install prompt, the about
+  panel shows a real **Install as an app** button. Before that, use the browser
+  menu → *Install app* / *Add to Home screen*.
+- **iOS**: there is no install prompt. Use Share → *Add to Home Screen*; the
+  panel says so in words.
+- **Already installed?** Both the panel section and the hint are suppressed —
+  you are never told how to install an app you are already running.
 
 ## Publish
 

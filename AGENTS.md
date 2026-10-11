@@ -24,8 +24,9 @@ Since the first cut the app gained: search that locates a point on the map
 hints, a hidden developer door ("The Secret Rose"), a named fetch status with
 a spinner and an error card with retry, graceful fallback to the global model
 when the Marine Institute is down, a favourite "show on map" (which clears any
-stale tide panel), scroll-to-top on opening a favourite, and a quick tap on the
-title to return home.
+stale tide panel), scroll-to-top on opening a favourite, a quick tap on the
+title to return home, and installation help in the about panel and a first-run
+hint (platform-detected, and silent once the app is already installed).
 
 The vendored station snapshot (`data/stations.json`) is **generated** —
 `tools/refresh-stations.sh` regenerated all 38 stations on **2026-10-07**. The
@@ -440,6 +441,41 @@ Two platform traps to remember, both of which cost an afternoon if forgotten:
   installing is Share → *Add to Home Screen*, and the interface has to say so
   in words rather than showing a button that never appears.
 
+### Installation — telling the reader how, once (2026-10-11)
+
+The app is installable and the interface now helps a reader discover it, in two
+places that draw on one detection (`js/app.js`):
+
+- **The about panel** carries an `#install-section` with platform-specific
+  words. Android, once the browser has offered `beforeinstallprompt`, gets a
+  real **Install as an app** button that replays the held event; before that
+  offer, and on iOS, it falls back to menu instructions. A desktop or an
+  unknown browser gets nothing — better silent than a wrong instruction.
+- **A first-run coachmark** (`id: "install"`, last in `HINTS`) points at the
+  title and says the same thing once. It is anchored only when `#result` is on
+  screen, so it does not greet a reader before the tool has answered anything.
+
+Rules that keep it honest:
+
+- **Detect, do not assume.** `isStandalone()` checks iOS Safari's
+  `navigator.standalone` **and** the `display-mode: standalone|fullscreen|
+  minimal-ui` media queries, so a reader already running it as an app is never
+  told how to install it again — the panel section and the coachmark are both
+  suppressed. `installPlatform()` identifies iOS by the UA (including iPadOS's
+  "Macintosh" spelling, caught by `maxTouchPoints > 1`) and Android by the UA.
+- **On Android the event is held, not ignored.** `beforeinstallprompt` is
+  `preventDefault`-ed so our own button can call `prompt()`; the event may only
+  be used once, so `promptInstall()` clears it and the section falls back to
+  the menu words. `appinstalled` clears it too and re-renders.
+- **Two events, categorical.** `install-shown` fires when the browser offers
+  installation (unchanged); `install-hint` fires when the coachmark is shown
+  (through the shared `hint-*` mechanism); `install-accepted` fires when our
+  Android button is tapped; `installed` fires on `appinstalled`.
+- **Nothing is stored.** Whether the panel shows the section is computed from
+  the platform on every open; only the coachmark's "seen" flag persists, in the
+  same `gealach-hints-seen` list as every other hint.
+
+
 ## Layout
 
 | Path | What it is |
@@ -546,6 +582,9 @@ Update this section in the same commit that adds or upgrades a dependency.
   - Service worker only over HTTPS or `localhost` — see *Deliverable shape*.
   - Provide `192`, `512` and a `purpose: maskable` icon; iOS additionally wants
     `apple-touch-icon`.
+  - Offer installation in words (see *Installation*): a real button only where
+    the browser offered `beforeinstallprompt`, menu instructions elsewhere, and
+    silence when already running as an app.
 - **Docs**:
   <https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps> ·
   <https://web.dev/learn/pwa/service-workers/>
@@ -579,9 +618,10 @@ Update this section in the same commit that adds or upgrades a dependency.
     `favourite-add|open|rename|remove`, `favourite-map` (a favourite shown on
     the map without loading its tide), `title-reset` (a tap on the title
     returned the page to the home view), `refresh` (the tide was re-fetched
-    from the summary card), `install-shown`, `installed`,
+    from the summary card), `install-shown`, `install-accepted` (the Android
+    install button was tapped), `installed`,
     `station-jump` (the offer to reach the nearest prediction station from a
-    located inland point), `hint-search|jump|map-tap|heart|details|rename` (a
+    located inland point), `hint-search|jump|map-tap|heart|details|rename|install` (a
     first-run coachmark was shown);
     failures `error-geocode`, `error-marine-ie` / `error-open-meteo` /
     `error-surge` (a named source failed — counted per API so a pattern is
@@ -624,8 +664,8 @@ Update this section in the same commit that adds or upgrades a dependency.
 
 - **Role**: a short set of coachmarks that point out the app's gestures the
   first time each becomes reachable — search, jump-to-nearest-sea, tap-the-map,
-  save-to-favourites, rename-a-favourite. A one-off onboarding experiment
-  (2026-10-09).
+  save-to-favourites, rename-a-favourite, install-as-an-app. A one-off
+  onboarding experiment (2026-10-09).
 - **Version**: no dependency; plain DOM in `index.html` (`.hint-layer`) and
   `js/app.js`.
 - **Best Practices**:
@@ -930,8 +970,9 @@ These apply to every home project unless a project has a reason to override one.
 
 <!--
 This file was written with an AI coding assistant, and updated with one in
-2026-10-04 when the first implementation landed, and again on 2026-10-10 ahead
-of the v1.0 decision (status, events, gestures).
+2026-10-04 when the first implementation landed, again on 2026-10-10 ahead
+of the v1.0 decision (status, events, gestures), and on 2026-10-11 for the
+installation help (detection, the panel section, the install hint).
 Assisted-by: GitHub Copilot (DeepSeek V4 Flash)
 Assisted-by: GitHub Copilot (DeepSeek V4 Pro)
 -->

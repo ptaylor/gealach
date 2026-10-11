@@ -299,6 +299,9 @@
     }
     .info-quote-link:hover { text-decoration: underline; }
     .info-quote-cite { display: block; margin-top: 0.3rem; font-size: 0.8rem; font-style: normal; color: var(--muted); }
+    .install-section { margin: 0 0 1rem; }
+    .install-note { margin: 0 0 0.7rem; font-size: 0.9rem; color: var(--muted); }
+    .install-btn { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 0.5rem 1.1rem; font-size: 0.95rem; font-weight: 600; cursor: pointer; }
     .info-link { display: block; color: var(--accent); margin-bottom: 1rem; }
     .info-close { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 0.5rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer; }
 
@@ -525,6 +528,10 @@
       <img src="icons/icon.svg" alt="" class="info-icon" />
       <h2 class="brand-name"><span class="t-geal">geal</span><span class="t-ach">ach</span></h2>
       <div class="info-version" id="info-version"></div>
+      <div class="install-section hidden" id="install-section">
+        <p class="install-note" id="install-note"></p>
+        <button class="install-btn hidden" type="button" id="install-btn">Install as an app</button>
+      </div>
       <button class="debug-hotspot" type="button" id="debug-hotspot" aria-label="The Secret Rose" title=""></button>
       <blockquote class="info-quote">
         <a class="info-quote-link" href="https://en.wikisource.org/wiki/The_Wanderings_of_Oisin_and_Other_Poems/The_Wanderings_of_Oisin" target="_blank" rel="noopener">&ldquo;And the moon goad the waters night and day&rdquo;</a>
