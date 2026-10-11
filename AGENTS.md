@@ -96,11 +96,12 @@ Recorded so the decision is deliberate, not drifted into:
    already home, so a stray tap disturbs nothing. (An 800 ms hold on the same
    title opens the about panel; the hold timer tells the two gestures apart.)
 7. **Read the moment on the curve.** The summary's NOW line carries the local
-   clock time beside it, so "now" is a time and not just a position; it yields
-   when a high/low marker sits close enough to collide. The card's head also
-   carries a refresh (disabled until `REFRESH_MIN_MS`, 5 min, has passed since
-   the fetch — the tide does not change minute to minute) and an (i) that opens
-   the same about panel as the title's long-press.
+   clock time at its foot, so "now" is a time and not just a position — on a
+   row of its own, below the plot, so it cannot collide with the high/low
+   labels that sit up on the curve above their markers. The card's head also
+   carries a refresh (which appears only once `REFRESH_MIN_MS`, 5 min, has
+   passed since the fetch — the tide does not change minute to minute) and an
+   (i) that opens the same about panel as the title's long-press.
 
 ### Non-goals
 

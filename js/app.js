@@ -1853,21 +1853,16 @@ function drawSummaryCurve(series, now, turns) {
     inner += `<circle cx="${nowX.toFixed(1)}" cy="${y(nowH).toFixed(1)}" r="3.5" fill="var(--card)" stroke="var(--accent)" stroke-width="2" />`;
   }
 
-  // The clock time of "now", placed at the foot of the NOW line. It is dropped
-  // when a high/low marker sits close enough to collide with it — the turn
-  // label already carries its own time, and two overlapping clocks help nobody.
-  const turnXs = [];
-  for (const turn of [turns.nextHigh, turns.nextLow]) {
-    if (!turn) continue;
-    const tm = Date.parse(turn.time);
-    if (tm < from || tm > to) continue;
-    turnXs.push(x(tm));
-  }
-  const MIN_LABEL_GAP = 34; // px, enough for "HH:MM" at this font size
-  const clearsTurns = turnXs.every((tx) => Math.abs(tx - nowX) > MIN_LABEL_GAP);
-  if (clearsTurns) {
-    inner += `<text class="curve-label curve-now-time" x="${nowX.toFixed(1)}" y="${H - padBottom + 11}" text-anchor="middle">${fmtClock(iso(now), zone)}</text>`;
-  }
+  // The clock time of "now", placed at the foot of the NOW line. The H/L labels
+  // sit up on the curve (above their markers), so they cannot collide with it —
+  // the only risk is running past the edge of the plot, so the label (not the
+  // line) is nudged inwards when "now" is close to an edge.
+  const LABEL_HALF_W = 18; // ~half of "HH:MM" at this font size
+  const labelX = Math.max(
+    padLeft + LABEL_HALF_W,
+    Math.min(nowX, W - padRight - LABEL_HALF_W),
+  );
+  inner += `<text class="curve-label curve-now-time" x="${labelX.toFixed(1)}" y="${H - padBottom + 11}" text-anchor="middle">${fmtClock(iso(now), zone)}</text>`;
 
   for (const [letter, turn] of [["H", turns.nextHigh], ["L", turns.nextLow]]) {
     if (!turn) continue;
