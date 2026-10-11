@@ -120,6 +120,48 @@ function updateThemeColorMeta() {
 const ATTRIBUTION =
   "Data: Marine Institute (CC-BY 4.0) · Open-Meteo & GeoNames (CC-BY 4.0) · NOAA · OpenStreetMap (ODbL).";
 
+// ---------------------------------------------------------------------------
+// installability (Add to Home Screen)
+//
+// iOS and Android install very differently: Android (Chrome) fires
+// `beforeinstallprompt`, which we can hold and replay from a real button; iOS
+// has no such event and no install prompt at all — it is Share -> Add to Home
+// Screen, in words. Safari on iOS exposes `navigator.standalone` to say whether
+// the page is already running as an installed app; everyone else uses the
+// `display-mode: standalone` media query. Both are checked so a reader who has
+// already installed it is never told how to install it again.
+
+// The held `beforeinstallprompt` event, if the browser has offered one. Kept so
+// a real Install button can replay it (the event may only be used once).
+let deferredInstallPrompt = null;
+
+// Whether the page is already running as an installed / standalone app.
+function isStandalone() {
+  try {
+    if (window.navigator.standalone === true) return true; // iOS Safari
+    return matchMedia("(display-mode: standalone)").matches ||
+      matchMedia("(display-mode: fullscreen)").matches ||
+      matchMedia("(display-mode: minimal-ui)").matches;
+  } catch {
+    return false;
+  }
+}
+
+// Which install story to tell. "ios" and "android" carry advice; "desktop" and
+// "other" get a short line; null means say nothing (already installed, or a
+// browser we have no advice for).
+function installPlatform() {
+  if (isStandalone()) return null;
+  const ua = navigator.userAgent || "";
+  const iOS =
+    /iPad|iPhone|iPod/.test(ua) ||
+    // iPadOS 13+ reports as a Mac; the touch points give it away.
+    (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  if (iOS) return "ios";
+  if (/Android/.test(ua)) return "android";
+  return null;
+}
+
 let stations = [];
 let stationMap = null;
 let controller = null;
@@ -182,6 +224,14 @@ const HINTS = [
     anchor: () => document.querySelector("#favourites-list .fave-rename"),
     text: "Tap the pencil to rename a favourite — call it anything you like.",
   },
+  {
+    id: "install",
+    // Only when not already installed, and only anchored once the page is quiet
+    // (a location or a favourite is on screen), so it does not greet a reader
+    // before the tool has done anything.
+    anchor: () => (installPlatform() && isVisible($("result")) ? $("brand") : null),
+    text: "Keep Gealach on your home screen: hold this title for the about panel, or use your browser's install or Share menu.",
+  },
 ];
 
 init();
@@ -215,6 +265,8 @@ async function init() {
     if (btn) toggleDatum();
   });
   $("sum-heart").addEventListener("click", toggleFavourite);
+  $("sum-refresh").addEventListener("click", refreshCurrent);
+  $("sum-info").addEventListener("click", openInfo);
   $("locate").addEventListener("click", locateMe);
   $("retry-btn").addEventListener("click", retryFetch);
   $("hint-ok").addEventListener("click", dismissHint);
@@ -242,6 +294,9 @@ async function init() {
   $("debug-overlay").addEventListener("click", (e) => {
     if (e.target === $("debug-overlay")) closeDebug();
   });
+  // Re-evaluate the refresh button as the freshness window passes, so it
+  // re-enables on its own without the reader having to do anything.
+  setInterval(updateRefreshButton, 30000);
   const brand = $("brand");
   brand.addEventListener("pointerdown", startInfoHold);
   brand.addEventListener("pointerup", () => {
@@ -282,14 +337,23 @@ async function init() {
     navigator.serviceWorker.register("sw.js").catch(() => {});
   }
 
-  // Installability: count how often the browser offers installation and how
-  // often it is accepted. No preventDefault — the native prompt stays intact.
-  window.addEventListener("beforeinstallprompt", () => {
+  // Installability. On Android the browser offers an install event we can hold
+  // and replay from our own button (see renderInstallSection); on iOS there is
+  // no event and no prompt, only Share -> Add to Home Screen in words. Both are
+  // rendered into the about panel.
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault(); // hold it so our button can call prompt() later
+    deferredInstallPrompt = e;
     trackEvent("install-shown");
+    renderInstallSection();
   });
   window.addEventListener("appinstalled", () => {
+    deferredInstallPrompt = null;
     trackEvent("installed");
+    renderInstallSection();
   });
+  $("install-btn").addEventListener("click", promptInstall);
+  renderInstallSection();
 
   window.addEventListener("offline", () => setOffline(true));
   window.addEventListener("online", () => setOffline(false));
@@ -701,6 +765,62 @@ function retryFetch() {
   load(currentPoint);
 }
 
+// How long a fetched prediction is treated as fresh. The refresh button only
+// appears once this has passed, so a reader cannot hammer the sources (and the
+// tide does not change minute to minute anyway).
+const REFRESH_MIN_MS = 5 * 60 * 1000;
+
+// True between a refresh click and the result landing, so the button stays on
+// screen (disabled) rather than vanishing under the reader's finger.
+let refreshInFlight = false;
+
+// Re-fetch the point on screen. Guarded here as well as by the button's
+// visibility, so a programmatic call cannot bypass the freshness window.
+function refreshCurrent() {
+  if (!currentPoint) return;
+  if (!refreshAllowed()) return;
+  trackEvent("refresh");
+  refreshInFlight = true;
+  updateRefreshButton();
+  abort();
+  load(currentPoint);
+}
+
+// Whether enough time has passed since the last successful fetch to refresh.
+function refreshAllowed() {
+  if (!tideResult || !tideResult.fetchedAt) return true;
+  return Date.now() - Date.parse(tideResult.fetchedAt) >= REFRESH_MIN_MS;
+}
+
+// Show the refresh button only when there is something to refresh. While the
+// data is fresh it is hidden entirely (a permanently greyed control teaches
+// nothing); during a re-fetch it stays visible but disabled.
+function updateRefreshButton() {
+  const btn = $("sum-refresh");
+  if (!btn) return;
+  const allowed = refreshAllowed();
+  const show = allowed || refreshInFlight;
+  btn.hidden = !show;
+  // Disabled both while the window is closed and while a refresh is running,
+  // so the control cannot be double-fired mid-request.
+  btn.disabled = refreshInFlight || !allowed;
+  if (!show) {
+    btn.title = "";
+    return;
+  }
+  if (refreshInFlight) {
+    btn.title = "Refreshing…";
+  } else if (allowed) {
+    btn.title = "Refresh";
+  } else {
+    const mins = Math.max(
+      1,
+      Math.ceil((REFRESH_MIN_MS - (Date.now() - Date.parse(tideResult.fetchedAt))) / 60000),
+    );
+    btn.title = `Refreshed just now — available again in ${mins} min`;
+  }
+}
+
 // Bound a whole source operation by wall-clock time. Adapters may make several
 // requests (the Marine Institute's high/low and then its curve), so a per-
 // request ceiling is not enough — this caps the lot, so the app never spins
@@ -816,6 +936,11 @@ async function load(point) {
       `We could not reach the tide source${where} just now. This is usually a ` +
         `temporary problem with the service or your connection — please try again.`,
     );
+  } finally {
+    // The refresh is no longer in flight, whether it succeeded, failed or was
+    // aborted — let the button settle to its resting state.
+    refreshInFlight = false;
+    updateRefreshButton();
   }
 }
 
@@ -1419,11 +1544,59 @@ function cancelInfoHold() {
 
 function openInfo() {
   $("info-version").textContent = versionText();
+  renderInstallSection();
   $("info-overlay").classList.remove("hidden");
 }
 
 function closeInfo() {
   $("info-overlay").classList.add("hidden");
+}
+
+// Draw the "keep it on your home screen" advice in the about panel. Hidden
+// entirely when the app is already installed or we have no advice for the
+// browser: an instruction a reader does not need is noise. On Android, where
+// the browser offered an install event, a real button is shown instead of the
+// menu-by-menu words; iOS gets the Share -> Add to Home Screen steps, because
+// it has no install event and no prompt at all.
+function renderInstallSection() {
+  const section = $("install-section");
+  if (!section) return;
+  const platform = installPlatform();
+  if (!platform) {
+    section.classList.add("hidden");
+    return;
+  }
+  section.classList.remove("hidden");
+  const note = $("install-note");
+  const btn = $("install-btn");
+  if (platform === "android" && deferredInstallPrompt) {
+    note.textContent = "Install Gealach as an app — its own icon, no browser bars.";
+    btn.classList.remove("hidden");
+  } else if (platform === "android") {
+    note.textContent =
+      "Add Gealach to your home screen from the browser menu (⋮ → Install app / Add to Home screen).";
+    btn.classList.add("hidden");
+  } else {
+    note.textContent =
+      "Add Gealach to your home screen: tap Share, then “Add to Home Screen”.";
+    btn.classList.add("hidden");
+  }
+}
+
+// Replay the held Android install event. The event can be used once; the
+// browser will fire `appinstalled` (or not) and we settle the panel either way.
+async function promptInstall() {
+  if (!deferredInstallPrompt) return;
+  trackEvent("install-accepted");
+  const evt = deferredInstallPrompt;
+  deferredInstallPrompt = null;
+  evt.prompt();
+  try {
+    await evt.userChoice;
+  } catch {
+    /* the choice is not reported on every browser — nothing to do */
+  }
+  renderInstallSection();
 }
 
 // A quick tap on the title: return to the home view — the search bar (cleared)
@@ -1591,6 +1764,9 @@ function renderSummary() {
     });
   $("sum-turns").replaceChildren(...turnBlocks);
 
+  // The refresh button reflects how fresh this fetch is.
+  updateRefreshButton();
+
   // The summary is now on screen, so the heart (and anything below it) can be
   // pointed out if it has not been seen yet.
   maybeHint();
@@ -1675,6 +1851,22 @@ function drawSummaryCurve(series, now, turns) {
   const nowH = seriesHeightAt(series, nowMs);
   if (nowH != null) {
     inner += `<circle cx="${nowX.toFixed(1)}" cy="${y(nowH).toFixed(1)}" r="3.5" fill="var(--card)" stroke="var(--accent)" stroke-width="2" />`;
+  }
+
+  // The clock time of "now", placed at the foot of the NOW line. It is dropped
+  // when a high/low marker sits close enough to collide with it — the turn
+  // label already carries its own time, and two overlapping clocks help nobody.
+  const turnXs = [];
+  for (const turn of [turns.nextHigh, turns.nextLow]) {
+    if (!turn) continue;
+    const tm = Date.parse(turn.time);
+    if (tm < from || tm > to) continue;
+    turnXs.push(x(tm));
+  }
+  const MIN_LABEL_GAP = 34; // px, enough for "HH:MM" at this font size
+  const clearsTurns = turnXs.every((tx) => Math.abs(tx - nowX) > MIN_LABEL_GAP);
+  if (clearsTurns) {
+    inner += `<text class="curve-label curve-now-time" x="${nowX.toFixed(1)}" y="${H - padBottom + 11}" text-anchor="middle">${fmtClock(iso(now), zone)}</text>`;
   }
 
   for (const [letter, turn] of [["H", turns.nextHigh], ["L", turns.nextLow]]) {
