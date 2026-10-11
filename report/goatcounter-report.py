@@ -45,6 +45,7 @@ import datetime as dt
 import io
 import json
 import os
+import random
 import sys
 import time
 
@@ -123,6 +124,7 @@ def get_api_base(site):
 
 API_ATTEMPTS = 3   # total attempts per request (1 = no retries)
 API_BACKOFF = 1.5  # seconds before the first retry; doubles each attempt
+API_GAP = 0.4      # seconds between successive calls, to stay under the limit
 
 
 def _is_json_response(resp):
@@ -146,12 +148,19 @@ def _is_retryable(status):
 
 
 def _describe_failure(url, resp):
-    """Explanatory message for a failed API call."""
+    """Explanatory message for a failed API call.
+
+    GoatCounter serves its 404 page (HTML) and its rate-limit notice as plain
+    text, so a non-JSON reply usually means the API was not reached — a rate
+    limit being the common cause, since its own 429 body says "rate limited
+    exceeded". The message says so rather than blaming the URL.
+    """
     ctype = resp.headers.get("Content-Type") or "unknown content type"
     if not _is_json_response(resp):
+        reason = "rate limited" if resp.status_code == 429 else "did not reach the API"
         return (
             f"API error ({resp.status_code}) for {url}: GoatCounter returned {ctype} "
-            f"instead of JSON, so the request did not reach the API: {_body_snippet(resp)}"
+            f"instead of JSON ({reason}): {_body_snippet(resp)}"
         )
     try:
         detail = json.dumps(resp.json())
@@ -178,6 +187,7 @@ def api_get(api_base, path, params=None, timeout=60, attempts=API_ATTEMPTS):
     for attempt in range(1, attempts + 1):
         error = None
         retryable = True
+        resp = None
         try:
             resp = requests.get(url, headers=headers, params=params, timeout=timeout)
         except requests.RequestException as e:
@@ -195,7 +205,11 @@ def api_get(api_base, path, params=None, timeout=60, attempts=API_ATTEMPTS):
         if not retryable or attempt == attempts:
             raise RuntimeError(error)
 
+        # A 429 asks us to wait, and says how long in its body; a longer,
+        # jittered wait avoids the herd that a fixed backoff would cause.
         delay = API_BACKOFF * (2 ** (attempt - 1))
+        if resp is not None and resp.status_code == 429:
+            delay = max(delay, 3.0 * attempt) + random.uniform(0, 0.5)
         print(f"  ⚠ {error}")
         print(f"    retrying in {delay:.1f}s (attempt {attempt + 1} of {attempts}) ...")
         time.sleep(delay)
@@ -212,23 +226,29 @@ def fetch_stats_data(site, start, end):
     hits_params = {**params, "limit": 200}
 
     total = api_get(api_base, "stats/total", params)
+    time.sleep(API_GAP)
     hits = api_get(api_base, "stats/hits", hits_params)
 
-    # Optional breakdowns (best-effort — a missing one is not a failure).
+    # Optional breakdowns (best-effort — a missing one is not a failure). The
+    # gap between calls keeps six quick requests from tripping the rate limit.
     browsers = systems = locations = refs = None
     try:
+        time.sleep(API_GAP)
         browsers = api_get(api_base, "stats/browsers", params)
     except Exception:
         pass
     try:
+        time.sleep(API_GAP)
         systems = api_get(api_base, "stats/systems", params)
     except Exception:
         pass
     try:
+        time.sleep(API_GAP)
         locations = api_get(api_base, "stats/locations", params)
     except Exception:
         pass
     try:
+        time.sleep(API_GAP)
         refs = api_get(api_base, "stats/toprefs", params)
     except Exception:
         pass
