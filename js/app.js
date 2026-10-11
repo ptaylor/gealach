@@ -706,18 +706,23 @@ function retryFetch() {
   load(currentPoint);
 }
 
-// How long a fetched prediction is treated as fresh. The refresh button is
-// disabled until this has passed, so a reader cannot hammer the sources (and
-// the tide does not change minute to minute anyway).
+// How long a fetched prediction is treated as fresh. The refresh button only
+// appears once this has passed, so a reader cannot hammer the sources (and the
+// tide does not change minute to minute anyway).
 const REFRESH_MIN_MS = 5 * 60 * 1000;
 
+// True between a refresh click and the result landing, so the button stays on
+// screen (disabled) rather than vanishing under the reader's finger.
+let refreshInFlight = false;
+
 // Re-fetch the point on screen. Guarded here as well as by the button's
-// disabled state, so a programmatic call cannot bypass the freshness window.
+// visibility, so a programmatic call cannot bypass the freshness window.
 function refreshCurrent() {
   if (!currentPoint) return;
   if (!refreshAllowed()) return;
   trackEvent("refresh");
-  $("sum-refresh").disabled = true; // hold until the fresh render lands
+  refreshInFlight = true;
+  updateRefreshButton();
   abort();
   load(currentPoint);
 }
@@ -728,14 +733,25 @@ function refreshAllowed() {
   return Date.now() - Date.parse(tideResult.fetchedAt) >= REFRESH_MIN_MS;
 }
 
-// Enable or disable the refresh button to match the freshness window, and say
-// in the tooltip why it is disabled.
+// Show the refresh button only when there is something to refresh. While the
+// data is fresh it is hidden entirely (a permanently greyed control teaches
+// nothing); during a re-fetch it stays visible but disabled.
 function updateRefreshButton() {
   const btn = $("sum-refresh");
   if (!btn) return;
   const allowed = refreshAllowed();
-  btn.disabled = !allowed;
-  if (allowed) {
+  const show = allowed || refreshInFlight;
+  btn.hidden = !show;
+  // Disabled both while the window is closed and while a refresh is running,
+  // so the control cannot be double-fired mid-request.
+  btn.disabled = refreshInFlight || !allowed;
+  if (!show) {
+    btn.title = "";
+    return;
+  }
+  if (refreshInFlight) {
+    btn.title = "Refreshing…";
+  } else if (allowed) {
     btn.title = "Refresh";
   } else {
     const mins = Math.max(
@@ -861,6 +877,11 @@ async function load(point) {
       `We could not reach the tide source${where} just now. This is usually a ` +
         `temporary problem with the service or your connection — please try again.`,
     );
+  } finally {
+    // The refresh is no longer in flight, whether it succeeded, failed or was
+    // aborted — let the button settle to its resting state.
+    refreshInFlight = false;
+    updateRefreshButton();
   }
 }
 
