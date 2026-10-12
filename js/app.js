@@ -766,9 +766,10 @@ function retryFetch() {
 }
 
 // How long a fetched prediction is treated as fresh. The refresh button only
-// appears once this has passed, so a reader cannot hammer the sources (and the
-// tide does not change minute to minute anyway).
-const REFRESH_MIN_MS = 5 * 60 * 1000;
+// appears once this has passed, so a reader cannot hammer the sources. It is 0
+// for now — the button is offered at once — but the window is kept in the code
+// so raising it again is a one-line change.
+const REFRESH_MIN_MS = 0;
 
 // True between a refresh click and the result landing, so the button stays on
 // screen (disabled) rather than vanishing under the reader's finger.
@@ -813,10 +814,8 @@ function updateRefreshButton() {
   } else if (allowed) {
     btn.title = "Refresh";
   } else {
-    const mins = Math.max(
-      1,
-      Math.ceil((REFRESH_MIN_MS - (Date.now() - Date.parse(tideResult.fetchedAt))) / 60000),
-    );
+    const left = REFRESH_MIN_MS - (Date.now() - Date.parse(tideResult.fetchedAt));
+    const mins = Math.max(1, Math.ceil(left / 60000));
     btn.title = `Refreshed just now — available again in ${mins} min`;
   }
 }
@@ -1029,18 +1028,23 @@ function hasTideData(r) {
 }
 
 // The plain "we cannot predict here" card, shown instead of the summary when a
-// source returns no points for the point asked about.
+// source returns no points for the point asked about. Two causes, counted
+// apart: no Irish station covers the point, so the global model answered and it
+// too had nothing (`error-no-station`); or a station did answer, but its
+// prediction does not reach the window on screen (`error-out-of-window`).
 function renderNoData(r) {
   const card = $("no-data");
   const body = $("no-data-body");
   const where = placeLabel ? escapeHtml(placeLabel) : "this point";
 
   if (r.kind === "global-model") {
+    trackEvent("error-no-station");
     body.innerHTML =
       `The global model (Open-Meteo Marine) has no sea-level series for ${where} ` +
       `in the next few days. It is a coarse model, and some coastal and enclosed ` +
       `points fall outside it.`;
   } else {
+    trackEvent("error-out-of-window");
     body.innerHTML =
       `The prediction source has no data for ${where} in the next few days.`;
   }
