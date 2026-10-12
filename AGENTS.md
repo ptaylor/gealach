@@ -59,11 +59,13 @@ are settled; the rest are what stands between here and v1.0.
   the fallback's honesty ("Outside the Irish prediction stations") is the
   behaviour to judge it by. *Settled in the sense that the behaviour is right;
   the limitation is written down here and in the README.*
-- **The first-run hints** are an onboarding *experiment* (see above). Decide
+- ~~**The first-run hints** are an onboarding *experiment* (see above). Decide
   from the `hint-*` counts whether they stay, or are removed in one commit,
-  before 1.0. Cliff note: they are entirely removable by deleting `HINTS`, the
-  hint functions and the `.hint-*` CSS/markup. *Still open: the counts now
-  include `hint-install`, but the decision has not been taken.*
+  before 1.0~~ — *decided 2026-10-12: they stay. They are no longer an
+  experiment to be judged, but a shipped feature; the `hint-*` counts are still
+  read for which ones land. The removal cliff note stands if a later decision
+  reverses this: delete `HINTS`, the hint functions and the `.hint-*`
+  CSS/markup.*
 - **The "Secret Rose" debug door** is a testing aid, not a user feature. It
   ships hidden; no action needed, but it is not part of the 1.0 promise.
   *Settled: it stays hidden and undocumented in the UI.*
@@ -676,8 +678,8 @@ Update this section in the same commit that adds or upgrades a dependency.
 
 - **Role**: a short set of coachmarks that point out the app's gestures the
   first time each becomes reachable — search, jump-to-nearest-sea, tap-the-map,
-  save-to-favourites, rename-a-favourite, install-as-an-app. A one-off
-  onboarding experiment (2026-10-09).
+  save-to-favourites, rename-a-favourite, install-as-an-app. Shipped as a
+  feature on 2026-10-12, having been an onboarding experiment since 2026-10-09.
 - **Version**: no dependency; plain DOM in `index.html` (`.hint-layer`) and
   `js/app.js`.
 - **Best Practices**:
@@ -688,7 +690,7 @@ Update this section in the same commit that adds or upgrades a dependency.
   - **Once per device.** "Seen" is a growing array under
     `localStorage["gealach-hints-seen"]`; a hint already there is never shown
     again. It is **not** versioned, so a release does not re-show them (a
-    deliberate choice — see the experiment note).
+    deliberate choice — see the decision note in *Towards 1.0*).
   - The spotlight is a ring (`#hint-ring`) with a huge spread `box-shadow`, so
     the hole tracks the element's live rect without any masking; the ring and
     bubble are repositioned on scroll/resize while open.
