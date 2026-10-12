@@ -1028,18 +1028,23 @@ function hasTideData(r) {
 }
 
 // The plain "we cannot predict here" card, shown instead of the summary when a
-// source returns no points for the point asked about.
+// source returns no points for the point asked about. Two causes, counted
+// apart: no Irish station covers the point, so the global model answered and it
+// too had nothing (`error-no-station`); or a station did answer, but its
+// prediction does not reach the window on screen (`error-out-of-window`).
 function renderNoData(r) {
   const card = $("no-data");
   const body = $("no-data-body");
   const where = placeLabel ? escapeHtml(placeLabel) : "this point";
 
   if (r.kind === "global-model") {
+    trackEvent("error-no-station");
     body.innerHTML =
       `The global model (Open-Meteo Marine) has no sea-level series for ${where} ` +
       `in the next few days. It is a coarse model, and some coastal and enclosed ` +
       `points fall outside it.`;
   } else {
+    trackEvent("error-out-of-window");
     body.innerHTML =
       `The prediction source has no data for ${where} in the next few days.`;
   }

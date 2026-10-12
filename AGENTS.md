@@ -14,7 +14,7 @@ the provisional working name was `taoidí` (*tides*) until 2026-10-05.
 ## Status
 
 The first implementation exists and is published: the app shell, the three ES
-modules, the PWA shell, the tests and the docs. Published as **v0.10** on
+modules, the PWA shell, the tests and the docs. Published as **v0.14** on
 <https://ptaylor.github.io/gealach/>; `main` carries the work since. Not yet
 v1.0 — see *Towards 1.0* below.
 
@@ -49,29 +49,37 @@ recorded with it. Nothing in this file is aspirational about a source that was
 not called. Where a candidate source was *not* verified, it says so (see
 *Candidates, not adopted*).
 
-## Towards 1.0 — the open questions (2026-10-10)
+## Towards 1.0 — the open questions (2026-10-10, revised 2026-10-12)
 
-Recorded so the decision is deliberate, not drifted into:
+Recorded so the decision is deliberate, not drifted into. Items struck through
+are settled; the rest are what stands between here and v1.0.
 
 - **The Marine Institute's reliability.** The primary source has failed for a
   full day twice in a week. v1.0 should state this as a known limitation, and
   the fallback's honesty ("Outside the Irish prediction stations") is the
-  behaviour to judge it by.
+  behaviour to judge it by. *Settled in the sense that the behaviour is right;
+  the limitation is written down here and in the README.*
 - **The first-run hints** are an onboarding *experiment* (see above). Decide
   from the `hint-*` counts whether they stay, or are removed in one commit,
   before 1.0. Cliff note: they are entirely removable by deleting `HINTS`, the
-  hint functions and the `.hint-*` CSS/markup.
+  hint functions and the `.hint-*` CSS/markup. *Still open: the counts now
+  include `hint-install`, but the decision has not been taken.*
 - **The "Secret Rose" debug door** is a testing aid, not a user feature. It
   ships hidden; no action needed, but it is not part of the 1.0 promise.
-- **Reserved events** `error-no-station` and `error-out-of-window` are
-  documented but not yet fired — wire them or drop them.
+  *Settled: it stays hidden and undocumented in the UI.*
+- ~~**Reserved events** `error-no-station` and `error-out-of-window` are
+  documented but not yet fired~~ — *wired 2026-10-12: `renderNoData` fires them,
+  `error-no-station` when the global model had nothing for a point with no Irish
+  station, `error-out-of-window` when a station answered but its prediction does
+  not reach the window on screen.*
 - **The old `feature/ux-review` branch was deleted unmerged** (2026-10-10) but
   its one commit, `d5bf0f8`, carried UX ideas worth revisiting: a headline row
   on the tide card (rising/falling, height now, rate) instead of burying the
   state in Details; the datum and distance printed on the card next to the
   turns; the moon glyph and current rose demoted out of the hero row; and the
   empty Favourites card folded away. The commit is still in the reflog and on
-  GitHub for a few weeks if the work is wanted back.
+  GitHub for a few weeks if the work is wanted back. *Still open — deliberately
+  out of scope for this pass.*
 
 ## What the tool is for
 
@@ -629,9 +637,10 @@ Update this section in the same commit that adds or upgrades a dependency.
     failures `error-geocode`, `error-marine-ie` / `error-open-meteo` /
     `error-surge` (a named source failed — counted per API so a pattern is
     visible, whether or not the reader was affected), `error-source` (the
-    umbrella: **no** source could answer, so the error card was shown).
-    `error-no-station` and `error-out-of-window` are reserved for when those
-    failure paths become explicit.
+    umbrella: **no** source could answer, so the error card was shown),
+    `error-no-station` (no Irish station covered the point and the global model
+    had nothing either — the no-data card) and `error-out-of-window` (a station
+    answered but its prediction does not reach the window on screen).
 - **Docs**: <https://www.goatcounter.com/> · <https://www.goatcounter.com/api.html>
 
 ### Fetch feedback (loading, timeouts, failures)
