@@ -766,9 +766,10 @@ function retryFetch() {
 }
 
 // How long a fetched prediction is treated as fresh. The refresh button only
-// appears once this has passed, so a reader cannot hammer the sources (and the
-// tide does not change minute to minute anyway).
-const REFRESH_MIN_MS = 5 * 60 * 1000;
+// appears once this has passed, so a reader cannot hammer the sources. It is 0
+// for now — the button is offered at once — but the window is kept in the code
+// so raising it again is a one-line change.
+const REFRESH_MIN_MS = 0;
 
 // True between a refresh click and the result landing, so the button stays on
 // screen (disabled) rather than vanishing under the reader's finger.
@@ -813,10 +814,8 @@ function updateRefreshButton() {
   } else if (allowed) {
     btn.title = "Refresh";
   } else {
-    const mins = Math.max(
-      1,
-      Math.ceil((REFRESH_MIN_MS - (Date.now() - Date.parse(tideResult.fetchedAt))) / 60000),
-    );
+    const left = REFRESH_MIN_MS - (Date.now() - Date.parse(tideResult.fetchedAt));
+    const mins = Math.max(1, Math.ceil(left / 60000));
     btn.title = `Refreshed just now — available again in ${mins} min`;
   }
 }

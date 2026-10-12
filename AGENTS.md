@@ -99,9 +99,11 @@ Recorded so the decision is deliberate, not drifted into:
    clock time at its foot, so "now" is a time and not just a position — on a
    row of its own, below the plot, so it cannot collide with the high/low
    labels that sit up on the curve above their markers. The card's head also
-   carries a refresh (which appears only once `REFRESH_MIN_MS`, 5 min, has
-   passed since the fetch — the tide does not change minute to minute) and an
-   (i) that opens the same about panel as the title's long-press.
+   carries a refresh and an (i) that opens the same about panel as the title's
+   long-press. The refresh is gated by `REFRESH_MIN_MS`, the freshness window
+   before it is offered — **0 for now**, so it is present at once, but the
+   mechanism is kept so raising it (the tide does not change minute to minute)
+   is a one-line change.
 
 ### Non-goals
 
