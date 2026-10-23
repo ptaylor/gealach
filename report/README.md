@@ -81,14 +81,21 @@ the report answers:
 - **Where the tide came from** — a pie of Irish-station vs global-model
   answers, the app's central distinction.
 - **How close the answering station was** — local / warned / global.
-- **Engagement** — searches, map taps, station jumps, details opened,
-  favourites added/opened, title resets.
+- **Engagement** — searches, map taps, station jumps, details opened, the
+  about panel, the Moon gallery, favourites added/opened, title resets.
+- **Visits by release** — Moon-gallery pageviews split by the release that
+  served them (`/moon-v0-15`), beside the about panel's version-line taps
+  (`about-version-v0-15`), so a release can be read against its reach rather
+  than guessed at. The Moon gallery's plain `/moon` pageview should equal the
+  sum of its per-release counts; a gap means a page served without the version
+  constant.
 - **Source and request failures** — `error-marine-ie`, `error-open-meteo`,
   `error-surge`, `error-source`, counted per API so a pattern is visible even
   when the reader never saw a problem.
 - **Tables** — entry, source, distance, surge & switches, engagement,
-  first-run hints, failures, geocoding, plus browsers / systems / countries and
-  the top events and pages.
+  Moon gallery, visits by release, version-line taps, first-run hints,
+  failures, geocoding, plus browsers / systems / countries and the top events
+  and pages.
 
 ## Dependencies
 

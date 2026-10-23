@@ -354,6 +354,10 @@ Rules that keep the seam honest:
 - **`js/tide.js` and `js/sources.js` must be DOM-free** — no `document`, no
   `window` at module scope — because they are the two files unit-tested in Node.
   Anything that needs the DOM belongs in `js/app.js`.
+- **`js/moon.js` is DOM-free too**, for the same reason plus one of its own: it
+  is imported by `js/app.js` (the tide card) and by `moon.html` (the phase
+  gallery), so the glyph is drawn in exactly one place. It returns markup as a
+  string, never a node.
 - **Nothing is guessed.** If a value is not in the data, the interface says
   "not available for this place" rather than estimating it. Weather-driven
   surge is the worked example: it is shown when
@@ -494,11 +498,13 @@ Rules that keep it honest:
 | Path | What it is |
 | --- | --- |
 | `index.html` | The app shell — markup, inline CSS, module entry, the about overlay and the first-run hint layer. |
+| `moon.html` | The phases of the Moon: eight named phases with the app's own glyph, the Irish names, and Wikipedia links. Reached from the about panel's **Phases of the Moon** link; a second HTML entry point, but not a second app. |
+| `js/moon.js` | The Moon's disc as SVG (`moonGlyph`) and the eight `MOON_PHASES`. DOM-free, so `js/app.js` and `moon.html` share one drawing and the tide card and the gallery cannot drift apart. |
 | `js/sources.js` | Source adapters; the only place that knows a provider's URL shape. DOM-free, unit-tested. |
 | `js/tide.js` | Pure derivations: nearest station, rate, next turn, range, springs/neaps. DOM-free, unit-tested. |
 | `js/app.js` | DOM, rendering, map browsing, install prompt, offline banner. |
 | `vendor/leaflet/` | Vendored Leaflet 1.9.4 (`leaflet.js`, `leaflet.css`) for the map; BSD-2-Clause. |
-| `sw.js` | Service worker: app shell cache, and a short-TTL cache for API responses. |
+| `sw.js` | Service worker: app shell cache (including `moon.html` and `js/moon.js`), and a short-TTL cache for API responses. |
 | `manifest.webmanifest` | Name, icons, colours, `display: standalone`. |
 | `icons/` | `icon.svg` source plus generated PNG sizes; generated, not drawn by hand. |
 | `data/stations.json` | Vendored snapshot of the 38 prediction stations: `{ id, name, latitude, longitude, curveId, kind }`, with the regeneration command and date in its header. `curveId` is the `imiTidePrediction` spelling, which differs from `id` for the twelve modelled stations. |
@@ -506,7 +512,7 @@ Rules that keep it honest:
 | `tools/refresh-stations.sh` | Regenerates `data/stations.json` from ERDDAP (`curl` + `jq`). |
 | `tools/make-icons.sh` | Rasterises `icons/icon.svg` with ImageMagick. |
 | `report/goatcounter-report.py` | Fetches the GoatCounter stats and writes a self-contained HTML report with embedded charts (development only; see `report/README.md`). |
-| `publish.sh` | Stamps the version, tags the release, and publishes a fixed file whitelist to the `public` branch; `main` is never published directly. |
+| `publish.sh` | Stamps the version, tags the release, and publishes a fixed file whitelist (`index.html`, `moon.html`, `sw.js`, `js/`, `vendor/`, `icons/`, `data/`, the manifest) to the `public` branch; `main` is never published directly. |
 | `test/` | `node --test` units for `js/tide.js` and `js/sources.js`, with recorded fixtures. |
 | `docs/data-sources.md` | The source contract: endpoints, variables, datums, licences, sample responses. |
 | `docs/derivations.md` | The formulas, including springs/neaps and why not the form factor. |
@@ -619,6 +625,13 @@ Update this section in the same commit that adds or upgrades a dependency.
   - The counter script is third-party (`gc.zgo.at`) and is deliberately not
     cached by the service worker: beacons are never served stale and simply do
     not fire offline.
+  - **A second entry point needs pageviews of its own.** `moon.html` loads
+    count.js with `data-goatcounter-settings='{"no_onload": true}'` to suppress
+    the automatic hit, then fires two explicitly: `/moon` for the page and
+    `/moon-v<release>` for the same visit tagged with the release that served
+    it. The version constant is stamped by `publish.sh` alongside the app's
+    `meta[name=version]` and the service-worker `VERSION`, so all three agree.
+    These are read by the report as pageviews, not events.
   - The footer discloses it: "Usage is measured with GoatCounter — no cookies,
     no personal data."
   - Event vocabulary: entry `search-name|coords|geolocate|map`; geocoding
@@ -634,7 +647,11 @@ Update this section in the same commit that adds or upgrades a dependency.
     from the summary card), `install-shown`, `install-accepted` (the Android
     install button was tapped), `installed`,
     `station-jump` (the offer to reach the nearest prediction station from a
-    located inland point), `hint-search|jump|map-tap|heart|details|rename|install` (a
+    located inland point), `about-open` (the about/version panel was opened),
+    `about-version-<slug>` (the version line inside it was tapped — the slug is
+    the release with dots as dashes, e.g. `about-version-v0-15`), `moon-back`
+    (the about panel's **Phases of the Moon** link was followed back to the
+    tide), `hint-search|jump|map-tap|heart|details|rename|install` (a
     first-run coachmark was shown);
     failures `error-geocode`, `error-marine-ie` / `error-open-meteo` /
     `error-surge` (a named source failed — counted per API so a pattern is

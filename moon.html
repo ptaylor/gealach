@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b6bcb" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)" />
+  <meta name="description" content="The phases of the Moon, as Gealach draws them: eight named phases, the Irish names, and where to read more." />
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <title>Phases of the Moon — Gealach</title>
+  <script data-goatcounter="https://gealach.goatcounter.com/count"
+          data-goatcounter-settings='{"no_onload": true}' async src="//gc.zgo.at/count.js"></script>
+  <script>
+    // Same theme handling as index.html, applied before first paint so the page
+    // does not flash the wrong palette. The choice is shared with the app.
+    (function () {
+      try {
+        var t = localStorage.getItem("gealach-theme");
+        if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+      } catch (e) { /* storage unavailable: follow the system */ }
+    })();
+  </script>
+  <style>
+    /* The palette is index.html's, so the discs here are the discs the app
+       draws. If the app's tokens change, change these with them. */
+    :root {
+      --bg: #f5f6f8;
+      --fg: #1b1e24;
+      --muted: #5c6470;
+      --accent: #0b6bcb;
+      --card: #ffffff;
+      --border: #dde1e7;
+      --moon: #d7dde5;
+      --moon-lit: #f0c75e;
+      --brand-silver: #b9c0cc;
+      --brand-blue: #0b6bcb;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f1115;
+        --fg: #e7e9ee;
+        --muted: #9aa2ae;
+        --accent: #5aa7ff;
+        --card: #181b21;
+        --border: #2a303b;
+        --moon: #3d4553;
+        --brand-silver: #c6ccd6;
+        --brand-blue: #5a9fe0;
+      }
+    }
+    html[data-theme="dark"] {
+      --bg: #0f1115;
+      --fg: #e7e9ee;
+      --muted: #9aa2ae;
+      --accent: #5aa7ff;
+      --card: #181b21;
+      --border: #2a303b;
+      --moon: #3d4553;
+      --brand-silver: #c6ccd6;
+      --brand-blue: #5a9fe0;
+    }
+    html[data-theme="light"] {
+      --bg: #f5f6f8;
+      --fg: #1b1e24;
+      --muted: #5c6470;
+      --accent: #0b6bcb;
+      --card: #ffffff;
+      --border: #dde1e7;
+      --moon: #d7dde5;
+      --moon-lit: #f0c75e;
+      --brand-silver: #b9c0cc;
+      --brand-blue: #0b6bcb;
+    }
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font: 17px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: env(safe-area-inset-top) 16px calc(24px + env(safe-area-inset-bottom));
+    }
+    main { max-width: 46rem; margin: 0 auto; }
+    header { margin: 1.2rem 0 1.4rem; }
+    .back { display: inline-block; margin-bottom: 0.8rem; color: var(--accent); text-decoration: none; font-size: 0.95rem; }
+    .back:hover { text-decoration: underline; }
+    header h1 { font-size: 1.8rem; margin: 0; line-height: 1.1; }
+    header .lede { color: var(--muted); font-size: 0.95rem; margin: 0.5rem 0 0; max-width: 34rem; }
+
+    /* Plain boxes: a hairline rule, no shadow, no depth. */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+      gap: 0.8rem;
+    }
+    .phase {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0.9rem 0.8rem 1rem;
+      text-align: center;
+      box-shadow: none;
+    }
+    .phase svg { display: block; width: 76px; height: 76px; margin: 0 auto 0.55rem; }
+    .phase h2 { font-size: 1rem; margin: 0 0 0.1rem; line-height: 1.2; }
+    .phase .irish { font-size: 0.85rem; color: var(--muted); font-style: italic; margin: 0 0 0.45rem; }
+    .phase .day { font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; margin: 0 0 0.5rem; }
+    .phase p { font-size: 0.85rem; margin: 0 0 0.6rem; }
+    .phase a { font-size: 0.85rem; color: var(--accent); }
+
+    h2.section { font-size: 1.15rem; margin: 2rem 0 0.7rem; }
+    .notes { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 0.9rem 1rem; font-size: 0.9rem; box-shadow: none; }
+    .notes p { margin: 0 0 0.6rem; }
+    .notes p:last-child { margin-bottom: 0; }
+    .notes dl { margin: 0; }
+    .notes dt { font-weight: 600; margin-top: 0.5rem; }
+    .notes dd { margin: 0; color: var(--muted); }
+
+    footer { margin-top: 2rem; padding-top: 0.8rem; border-top: 1px solid var(--border); font-size: 0.85rem; color: var(--muted); }
+    footer a { color: var(--accent); }
+    .footer-quote { margin: 0 0 0.8rem; text-align: center; }
+    .footer-quote-link {
+      display: block;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-style: italic;
+      font-size: 0.95rem;
+      line-height: 1.35;
+      color: var(--moon-lit);
+      text-decoration: none;
+    }
+    .footer-quote-link:hover { text-decoration: underline; }
+    .footer-quote-cite { display: block; margin-top: 0.25rem; font-size: 0.75rem; font-style: normal; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <a class="back" href="./">&larr; Back to the tide</a>
+      <h1>Phases of the Moon</h1>
+      <p class="lede">
+        The eight phases, drawn with the same glyph the app puts on the tide
+        card. The lit limb is on the right while the Moon waxes and on the left
+        while it wanes — the northern-hemisphere view.
+      </p>
+    </header>
+
+    <div class="grid" id="grid"></div>
+
+    <h2 class="section">Names in Irish</h2>
+    <div class="notes">
+      <dl>
+        <dt>Gealach</dt><dd>the Moon (itself the app's name).</dd>
+        <dt>Gealach nua</dt><dd>new moon.</dd>
+        <dt>Gealach ag fás</dt><dd>a waxing moon — also <em>gealach gheal</em>, "bright moon".</dd>
+        <dt>Céad cheathrú</dt><dd>first quarter.</dd>
+        <dt>Gealach lán</dt><dd>full moon — <em>lán</em> is "full".</dd>
+        <dt>Gealach ag dul i laige</dt><dd>a waning moon — "the Moon fading".</dd>
+        <dt>An cheathrú dheireanach</dt><dd>last quarter.</dd>
+      </dl>
+    </div>
+
+    <h2 class="section">Notes on the drawing</h2>
+    <div class="notes">
+      <p>
+        A phase is not a shape but a position: the Moon is always half-lit by
+        the Sun, and what changes is how much of that lit half faces us. The
+        glyph here is the app's — a disc of <code>var(--moon)</code> with the lit
+        portion in <code>var(--moon-lit)</code>, cut by a shadow circle of the
+        same radius whose centre slides across, so the terminator is an ellipse
+        rather than a straight line except exactly at the quarters.
+      </p>
+      <p>
+        One lunar month — new to new — is 29.53 days (the <em>synodic</em>
+        month). The app derives the phase from that interval as an
+        approximation: enough to name the phase and to find the next full and
+        new moon, but not an ephemeris and carrying no positional accuracy. The
+        "day" figures on each card are the point in that month at which the
+        phase begins.
+      </p>
+      <p>
+        The first and last quarters are easy to confuse because both are half
+        lit: waxing (first quarter) is lit on the right in the northern
+        hemisphere, waning (last quarter) on the left.
+      </p>
+    </div>
+
+    <footer>
+      <blockquote class="footer-quote">
+        <a class="footer-quote-link" href="https://en.wikisource.org/wiki/The_Wanderings_of_Oisin_and_Other_Poems/The_Wanderings_of_Oisin" target="_blank" rel="noopener">&ldquo;And the moon goad the waters night and day&rdquo;</a>
+        <cite class="footer-quote-cite">W. B. Yeats, <i>The Wanderings of Oisin</i></cite>
+      </blockquote>
+      <p>
+        Pictures drawn by <code>moonGlyph()</code> in
+        <a href="js/moon.js">js/moon.js</a>, the same function the app uses; the
+        current phase comes from <code>lunarPhase()</code> in
+        <a href="js/tide.js">js/tide.js</a>. See also the
+        <a href="https://en.wikipedia.org/wiki/Tide">tide</a> and
+        <a href="https://en.wikipedia.org/wiki/Spring_tide">spring tide</a>
+        articles, which explain why the Moon and the tides are in the same
+        conversation.
+      </p>
+      <p>Written with an AI coding assistant: GitHub Copilot (DeepSeek V4 Flash).</p>
+    </footer>
+  </main>
+
+  <script type="module">
+    import { MOON_PHASES, moonGlyph } from "./js/moon.js";
+    import { lunarPhase } from "./js/tide.js";
+
+    // GoatCounter pageviews.
+    //
+    // count.js is loaded with no_onload, so it never reports automatically:
+    // this page replaces that one hit with two explicit ones.
+    //   /moon            the page itself, on every visit
+    //   /moon-v<version> the same visit tagged with the release, so a spike
+    //                    can be read against a release rather than guessed.
+    // The version comes from the release that stamped index.html, which is
+    // also what the app's about panel shows.
+    function countPageview(path) {
+      if (window.goatcounter && typeof window.goatcounter.count === "function") {
+        window.goatcounter.count({ path });
+      }
+    }
+
+    const APP_VERSION = "v0.15";
+    countPageview("/moon");
+    countPageview(`/moon-${APP_VERSION.replace(/\./g, "-")}`);
+
+    // The one way back to the tide, worth counting on its own: it says whether
+    // the gallery is somewhere a reader returns from.
+    document.querySelector(".back").addEventListener("click", () => {
+      if (window.goatcounter && typeof window.goatcounter.count === "function") {
+        window.goatcounter.count({ path: "moon-back", event: true });
+      }
+    });
+
+    const WIKI = "https://en.wikipedia.org/wiki/";
+
+    document.getElementById("grid").innerHTML = MOON_PHASES.map((ph) => `<article class="phase">
+        <svg viewBox="0 0 76 76" width="76" height="76" role="img"
+             aria-label="${ph.name}, ${ph.irish}">${moonGlyph(ph, 76)}</svg>
+        <h2>${ph.name}</h2>
+        <p class="irish">${ph.irish}</p>
+        <p class="day">${ph.day} of 29.53</p>
+        <p>${ph.blurb}</p>
+        <a href="${WIKI}${ph.wiki}" target="_blank" rel="noopener">Wikipedia &rarr;</a>
+      </article>`).join("");
+
+    // The phase table and lunarPhase() must agree at the cardinal points; if
+    // they ever do not, the gallery and the tide card have parted company.
+    const epoch = Date.parse("2000-01-06T18:14:00Z");
+    const month = 29.530588853 * 86400000;
+    const check = [0, 0.25, 0.5, 0.75]
+      .map((f) => lunarPhase(new Date(epoch + f * month)).name)
+      .join("|");
+    if (check !== "New moon|First quarter|Full moon|Last quarter") {
+      console.warn("lunarPhase() disagrees with MOON_PHASES:", check);
+    }
+  </script>
+</body>
+</html>

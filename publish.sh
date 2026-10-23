@@ -27,6 +27,7 @@ PAGES_BRANCH="public"
 # simply skipped.
 SITE_FILES=(
   index.html
+  moon.html
   manifest.webmanifest
   sw.js
   js
@@ -61,9 +62,11 @@ fi
 # release must invalidate it or installed devices keep serving a stale page. ---
 sed -i.bak "s|content=\"v[0-9][0-9.]*\"|content=\"${NEXT_VERSION}\"|" index.html
 sed -i.bak "s|const VERSION = \"v[0-9][0-9.]*\";|const VERSION = \"${NEXT_VERSION}\";|" sw.js
-rm -f index.html.bak sw.js.bak
-if ! git diff --quiet -- index.html sw.js; then
-  git add index.html sw.js
+# moon.html tags its pageview with the release, so it carries the version too.
+sed -i.bak "s|const APP_VERSION = \"v[0-9][0-9.]*\";|const APP_VERSION = \"${NEXT_VERSION}\";|" moon.html
+rm -f index.html.bak sw.js.bak moon.html.bak
+if ! git diff --quiet -- index.html sw.js moon.html; then
+  git add index.html sw.js moon.html
   git commit -m "Bump version to ${NEXT_VERSION}"
 fi
 

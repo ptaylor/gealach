@@ -14,7 +14,9 @@ const API_CACHE = `gealach-api-${VERSION}`;
 const SHELL_URLS = [
   "./",
   "./index.html",
+  "./moon.html",
   "./js/app.js",
+  "./js/moon.js",
   "./js/sources.js",
   "./js/tide.js",
   "./vendor/leaflet/leaflet.js",

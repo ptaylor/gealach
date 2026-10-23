@@ -35,8 +35,14 @@ The Gealach event vocabulary read here is the one documented in AGENTS.md:
   engagement   details-open | map-open | station-jump | title-reset
                favourite-add | favourite-open | favourite-rename | favourite-remove
                favourite-map | install-shown | installed
+               about-open | about-version-<slug> | moon-back
                hint-search | hint-jump | hint-map-tap | hint-heart | hint-details | hint-rename
   failures     error-geocode | error-marine-ie | error-open-meteo | error-surge | error-source
+
+Pageviews, not events:
+  /moon                  the Moon gallery page (moon.html), once per visit
+  /moon-v<release>       the same visit tagged with the release that served it
+  /                      the tide app itself, counted by count.js
 """
 
 import argparse
@@ -339,6 +345,7 @@ ENGAGEMENT_EVENTS = (
     "details-open", "map-open", "station-jump", "title-reset",
     "favourite-add", "favourite-open", "favourite-rename", "favourite-remove",
     "favourite-map", "install-shown", "installed",
+    "about-open", "moon-back",
 )
 HINT_EVENTS = (
     "hint-search", "hint-jump", "hint-map-tap", "hint-heart",
@@ -348,6 +355,40 @@ FAILURE_EVENTS = (
     "error-geocode", "error-marine-ie", "error-open-meteo",
     "error-surge", "error-source",
 )
+
+# The phases-of-the-Moon gallery is a second entry point, so it has pageviews of
+# its own rather than events: `/moon` for the page, `/moon-v0-15` for the same
+# visit tagged with the release that served it.
+MOON_PAGE_PREFIX = "/moon"
+# The about panel's version line is tappable and counts `about-version-<slug>`,
+# so the release a reader is running is measurable and not just inferred from
+# the build date.
+VERSION_EVENT_PREFIX = "about-version-"
+
+
+def _is_moon_page(path):
+    """`/moon` and its per-release variants, but not an unrelated `/moonlight`."""
+    return path == MOON_PAGE_PREFIX or path.startswith(MOON_PAGE_PREFIX + "-")
+
+
+def _version_slug(raw):
+    """The slug the app and gallery use for a release: "v0.15" → "v0-15"."""
+    return raw.strip().replace(".", "-")
+
+
+def _tally(counts, prefix="", strip_prefix=False):
+    """{label: count} summed for every path starting with `prefix`, biggest first.
+
+    `counts` is a {path: count} map — summing the counts, not counting the
+    paths, because one path is one row however many hits it has.
+    """
+    out = {}
+    for p, n in counts.items():
+        if not p.startswith(prefix):
+            continue
+        label = p[len(prefix):] if strip_prefix else p
+        out[label] = out.get(label, 0) + n
+    return dict(sorted(out.items(), key=lambda kv: kv[1], reverse=True))
 
 
 def _count_map(hits_list, keys):
@@ -387,6 +428,27 @@ def build_report(site, start, end, data):
     surge = _count_map(events, SURGE_EVENTS)
     geocode = _count_map(events, GEOCODE_EVENTS)
 
+    # The Moon gallery is a second entry point, so its traffic is pageviews and
+    # not events. `/moon` counts every visit; `/moon-v<release>` repeats the
+    # same visit with the release attached, which is what dates it. The plain
+    # pageviews and the per-release ones should therefore agree — a gap means
+    # a page served without the version constant.
+    moon = {p.get("path", ""): p.get("count", 0) for p in pages if _is_moon_page(p.get("path", ""))}
+    moon_visits = moon.get(MOON_PAGE_PREFIX, 0)
+    moon_by_version = {
+        slug: cnt for slug, cnt in _tally(
+            moon, prefix=f"{MOON_PAGE_PREFIX}-", strip_prefix=True
+        ).items()
+    }
+    # The about panel's version line, split out of the generic event list so a
+    # release can be read as "how many readers are still on the old build".
+    version_taps = {
+        p[len(VERSION_EVENT_PREFIX):]: h
+        for p, h in ((h.get("path", ""), h.get("count", 0)) for h in events)
+        if p.startswith(VERSION_EVENT_PREFIX)
+    }
+    version_taps = dict(sorted(version_taps.items(), key=lambda kv: kv[1], reverse=True))
+
     # The primary answer came from an Irish gauge or from the global model.
     # "fallback" is the subset of global-model answers where the Marine
     # Institute was tried and failed — the number that tracks its reliability.
@@ -413,6 +475,10 @@ def build_report(site, start, end, data):
         "favourites_opened": engagement["favourite-open"],
         "stations_jumped": engagement["station-jump"],
         "map_taps": entry["search-map"],
+        "moon_visits": moon_visits,
+        "moon_back": engagement["moon-back"],
+        "about_opened": engagement["about-open"],
+        "version_taps": sum(version_taps.values()),
     }
 
     report = {
@@ -431,6 +497,15 @@ def build_report(site, start, end, data):
         "engagement": engagement,
         "hints": hints,
         "failures": failures,
+        "moon": {
+            "visits": moon_visits,
+            "by_version": moon_by_version,
+            "back": engagement["moon-back"],
+        },
+        "versions": {
+            "taps": version_taps,
+            "moon_by_version": moon_by_version,
+        },
         "top_events": top_events,
         "top_pages": top_pages,
     }
@@ -456,6 +531,7 @@ def short_summary(report):
         f"visitors={m['visitors']}, events={m['events']}, "
         f"searches={m['searches']}, answers={m['answers']} "
         f"({m['irish']} Irish / {m['global_model']} global), "
+        f"moon visits={m['moon_visits']}, "
         f"marine-ie errors={m['errors_marine_ie']}"
     )
 
@@ -530,6 +606,41 @@ def _chart_distance(report, charts_dir):
     return fig_to_base64(fig, charts_dir, "distance.png")
 
 
+def _chart_versions(report, charts_dir):
+    """Moon-gallery visits per release, and version-line taps per release.
+
+    Two releases' worth of data answer two different questions — which build is
+    still being loaded, and which build readers actually notice — so both are
+    drawn side by side when either has data.
+    """
+    if not HAVE_MPL:
+        return None
+    moon = report.get("moon", {}).get("by_version", {})
+    taps = report.get("versions", {}).get("taps", {})
+    if not moon and not taps:
+        return None
+    releases = sorted(set(moon) | set(taps))
+    moon_vals = [moon.get(r, 0) for r in releases]
+    tap_vals = [taps.get(r, 0) for r in releases]
+
+    fig, axes = plt.subplots(1, 2, figsize=(10, 0.45 * len(releases) + 2), sharey=True)
+    for ax, vals, title, color in (
+        (axes[0], moon_vals, "Moon gallery visits", "#0b6bcb"),
+        (axes[1], tap_vals, "About: version-line taps", "#b8860b"),
+    ):
+        bars = ax.barh(releases, vals, color=color)
+        ax.invert_yaxis()
+        ax.set_title(title)
+        ax.set_xlabel("Count")
+        for b, v in zip(bars, vals):
+            if v:
+                ax.text(b.get_width(), b.get_y() + b.get_height() / 2, f"  {v:,}",
+                        va="center", fontsize=9)
+    fig.suptitle("By release")
+    fig.tight_layout()
+    return fig_to_base64(fig, charts_dir, "versions.png")
+
+
 def _chart_failures(report, charts_dir):
     f = report["failures"]
     if not HAVE_MPL or sum(f.values()) == 0:
@@ -559,6 +670,8 @@ def _chart_engagement(report, charts_dir):
         ("Locate-me", entry["search-geolocate"]),
         ("Station jumps", e["station-jump"]),
         ("Details opened", e["details-open"]),
+        ("About panel", e["about-open"]),
+        ("Moon gallery", report["metrics"]["moon_visits"]),
         ("Favourites added", e["favourite-add"]),
         ("Favourites opened", e["favourite-open"]),
         ("Title reset", e["title-reset"]),
@@ -720,6 +833,14 @@ def generate_html(report, charts, out_dir):
             hint="counted per API, affected or not",
         ),
         _metric_card(
+            f"{m['moon_visits']:,}", "Moon gallery visits",
+            hint=f"{m['moon_back']:,} returned to the tide",
+        ),
+        _metric_card(
+            f"{m['about_opened']:,}", "About panel opened",
+            hint=f"{m['version_taps']:,} tapped the version",
+        ),
+        _metric_card(
             f"{m['errors_total']:,}", "All source errors",
         ),
     ])
@@ -733,6 +854,12 @@ def generate_html(report, charts, out_dir):
             "coarser global model with a visible warning.",
         ),
         _img_section("How close the answering station was", charts.get("distance")),
+        _img_section(
+            "Visits by release", charts.get("versions"),
+            "The Moon gallery tags each visit with the release that served it, and "
+            "the about panel counts a tap on its version line. Together they show "
+            "whether readers are on the current build.",
+        ),
         _img_section("Engagement", charts.get("engagement")),
         _img_section(
             "Source and request failures", charts.get("failures"),
@@ -755,6 +882,25 @@ def generate_html(report, charts, out_dir):
         _table_section("Surge & switches", {**report["surge"], **report["switches"]},
                        "Event", "Count"),
         _table_section("Engagement", _kv(report["engagement"]), "Event", "Count"),
+        _table_section(
+            "Moon gallery", {
+                "/moon (pageviews)": report["moon"]["visits"],
+                "Back to the tide": report["moon"]["back"],
+            }, "Metric", "Count",
+            note="A second entry point, reached from the about panel.",
+        ),
+        _table_section(
+            "Visits by release", report["moon"].get("by_version", {}),
+            "Release", "Moon visits",
+            note="Derived from the /moon-v<release> pageview; the plain /moon "
+                 "count should match their sum.",
+        ),
+        _table_section(
+            "Version line taps", report["versions"].get("taps", {}),
+            "Release", "Taps",
+            note="about-version-<release>: a reader opened the about panel and "
+                 "tapped the version it reported.",
+        ),
         _table_section("First-run hints", _kv(report["hints"]), "Hint", "Shown",
                        note="The onboarding experiment — judge whether it earns its keep."),
         _table_section("Failures", _kv(report["failures"]), "Event", "Count"),
@@ -813,6 +959,7 @@ def generate_report(report, out_dir):
         "daily": _chart_daily(report, charts_dir),
         "source": _chart_source_split(report, charts_dir),
         "distance": _chart_distance(report, charts_dir),
+        "versions": _chart_versions(report, charts_dir),
         "engagement": _chart_engagement(report, charts_dir),
         "failures": _chart_failures(report, charts_dir),
     }
