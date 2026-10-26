@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f5f6f8" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)" />
+  <meta name="description" content="A colour study for the Moon's disc: candidate lit and unlit pairs, drawn by the app's own glyph, in light and dark mode side by side." />
+  <title>Moon colours — a study — Gealach</title>
+  <style>
+    :root {
+      --bg: #f5f6f8;
+      --fg: #1b1e24;
+      --muted: #5c6470;
+      --accent: #0b6bcb;
+      --card: #ffffff;
+      --border: #dde1e7;
+      --moon: #d7dde5;
+      --moon-lit: #f0c75e;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f1115;
+        --fg: #e7e9ee;
+        --muted: #9aa2ae;
+        --accent: #5aa7ff;
+        --card: #181b21;
+        --border: #2a303b;
+        --moon: #3d4553;
+      }
+    }
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font: 17px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: env(safe-area-inset-top) 16px calc(24px + env(safe-area-inset-bottom));
+    }
+    main { max-width: 62rem; margin: 0 auto; }
+
+    header { margin: 1.4rem 0 1.2rem; }
+    header h1 { font-size: 1.75rem; margin: 0; line-height: 1.1; }
+    header .lede { color: var(--muted); font-size: 0.95rem; margin: 0.5rem 0 0; max-width: 42rem; }
+
+    /* The theme switch is a page-level control, not the app's stored setting:
+       this page's job is to show both modes at once, so it overrides nothing
+       and merely scrolls between the two halves. */
+    .jump { display: flex; gap: 0.6rem; margin: 0 0 1.4rem; flex-wrap: wrap; }
+    .jump a {
+      display: inline-block; padding: 0.45rem 0.9rem; border-radius: 8px;
+      border: 1px solid var(--border); background: var(--card);
+      color: var(--accent); text-decoration: none; font-size: 0.9rem; font-weight: 600;
+    }
+    .jump a:hover { border-color: var(--accent); }
+
+    /* Both modes are drawn at once, so each block carries its own palette.
+       These are copied from index.html; the swatch labels show the values. */
+    .mode {
+      border-radius: 14px;
+      padding: 1rem 1rem 1.2rem;
+      margin-bottom: 1.2rem;
+    }
+    .mode-light {
+      --m-bg: #f5f6f8; --m-card: #ffffff; --m-border: #dde1e7;
+      --m-fg: #1b1e24; --m-muted: #5c6470;
+      background: var(--m-bg); color: var(--m-fg);
+      border: 1px solid var(--m-border);
+    }
+    .mode-dark {
+      --m-bg: #0f1115; --m-card: #181b21; --m-border: #2a303b;
+      --m-fg: #e7e9ee; --m-muted: #9aa2ae;
+      background: var(--m-bg); color: var(--m-fg);
+      border: 1px solid var(--m-border);
+    }
+    .mode h2 { font-size: 1.05rem; margin: 0 0 0.2rem; letter-spacing: 0.01em; }
+    .mode .mode-note { color: var(--m-muted); font-size: 0.82rem; margin: 0 0 0.9rem; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+      gap: 0.7rem;
+    }
+    .swatch {
+      background: var(--m-card);
+      border: 1px solid var(--m-border);
+      border-radius: 12px;
+      padding: 0.75rem 0.6rem 0.8rem;
+      text-align: center;
+      box-shadow: none;
+    }
+    .swatch svg { display: block; width: 64px; height: 64px; margin: 0 auto 0.5rem; }
+    .swatch .name { font-size: 0.82rem; font-weight: 600; line-height: 1.25; }
+    .swatch .hexes { font-size: 0.7rem; color: var(--m-muted); font-variant-numeric: tabular-nums; margin-top: 0.25rem; }
+    .swatch .ratio { font-size: 0.7rem; font-variant-numeric: tabular-nums; margin-top: 0.15rem; }
+    .swatch .ratio.good { color: #166534; }
+    .swatch .ratio.weak { color: #b45309; }
+    .swatch .ratio.poor { color: #b91c1c; }
+    .mode-dark .swatch .ratio.good { color: #4ade80; }
+    .mode-dark .swatch .ratio.weak { color: #fbbf24; }
+    .mode-dark .swatch .ratio.poor { color: #f87171; }
+    .swatch.current { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .swatch .tag {
+      display: inline-block; margin-bottom: 0.4rem; font-size: 0.62rem;
+      text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700;
+      color: var(--accent);
+    }
+
+    /* A strip of the four reading phases, so a pairing is judged on the
+       crescent sliver as well as on the full disc — the crescent is where a
+       weak pairing fails first. */
+    .strip {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem;
+      background: var(--m-card); border: 1px solid var(--m-border);
+      border-radius: 12px; padding: 0.7rem; margin-bottom: 0.9rem;
+    }
+    .strip svg { display: block; width: 100%; height: auto; max-width: 72px; margin: 0 auto; }
+    .strip-label { color: var(--m-muted); font-size: 0.72rem; text-align: center; margin-top: 0.2rem; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin-top: 0.3rem; }
+    th, td { text-align: left; padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    td:last-child, th:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+    tr:last-child td { border-bottom: 0; }
+    .current-row td { font-weight: 700; }
+
+    .notes { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 0.9rem 1rem; font-size: 0.9rem; }
+    .notes p { margin: 0 0 0.6rem; }
+    .notes p:last-child { margin-bottom: 0; }
+    h2.section { font-size: 1.1rem; margin: 1.8rem 0 0.6rem; }
+    footer { margin-top: 2rem; padding-top: 0.8rem; border-top: 1px solid var(--border); font-size: 0.82rem; color: var(--muted); }
+    footer a { color: var(--accent); }
+    code { font-size: 0.85em; }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Moon colours — a study</h1>
+      <p class="lede">
+        Candidate colour pairings for the Moon's disc, drawn with the app's own
+        <code>moonGlyph()</code>. Each pairing is shown in both palettes, because
+        a colour that works on a dark card can vanish on a white one. The contrast
+        figure is the ratio between the lit limb and the unlit disc — the number
+        that decides whether a crescent reads as a crescent or as a smudge.
+      </p>
+    </header>
+
+    <nav class="jump">
+      <a href="#light">Light mode</a>
+      <a href="#dark">Dark mode</a>
+      <a href="#method">How these were measured</a>
+    </nav>
+
+    <section class="mode mode-light" id="light">
+      <h2>Light mode</h2>
+      <p class="mode-note">Cards on <code>#ffffff</code>, page on <code>#f5f6f8</code>. The strip below is the <strong>recommended</strong> pairing — <code>#b8860b</code> on <code>#d7dde5</code> — at the four phases that show it best.</p>
+      <div class="strip" id="strip-light"></div>
+      <div class="grid" id="grid-light"></div>
+    </section>
+
+    <section class="mode mode-dark" id="dark">
+      <h2>Dark mode</h2>
+      <p class="mode-note">Cards on <code>#181b21</code>, page on <code>#0f1115</code>. The strip below is what <strong>ships today</strong> — <code>#f0c75e</code> on <code>#3d4553</code> — which already reads well; the alternatives here are refinements, not repairs.</p>
+      <div class="strip" id="strip-dark"></div>
+      <div class="grid" id="grid-dark"></div>
+    </section>
+
+    <h2 class="section" id="method">How these were measured</h2>
+    <div class="notes">
+      <p>
+        Contrast is the WCAG 2.x relative-luminance ratio, computed with the
+        standard sRGB transfer function. It is a proxy, not a law: nothing here
+        is text, so the 4.5:1 text threshold does not apply. What matters is
+        whether the lit and unlit halves separate — a ratio under about
+        <strong>1.5:1</strong> reads as one flat circle at phone size, and the
+        crescent phases are the first to fail, because a sliver has little area
+        to carry the difference.
+      </p>
+      <p>
+        The bands used below: <strong>poor</strong> under 1.5:1,
+        <strong>weak</strong> 1.5–2.0:1, <strong>good</strong> 2.0:1 and up.
+        These are judgement calls for this particular drawing, not a standard.
+      </p>
+      <p>
+        One trap this page makes visible: <code>--moon-lit</code> is not only
+        the Moon's lit limb. It also colours the Yeats quotes in the footer, the
+        about panel and the Secret Rose overlay, and the saved-heart icon. A
+        deeper gold to fix the disc therefore darkens that text too — which is
+        why every swatch reports a second figure, the lit colour against the
+        card, the one that governs whether the quotes still read as gold.
+      </p>
+    </div>
+
+    <footer>
+      <p>
+        Drawn by <a href="js/moon.js">js/moon.js</a>, the same function the app and
+        <a href="moon.html">the phase gallery</a> use. This study is a development
+        page; it is not linked from the app.
+      </p>
+      <p>Written with an AI coding assistant: GitHub Copilot (DeepSeek V4 Flash).</p>
+    </footer>
+  </main>
+
+  <script type="module">
+    import { moonGlyph } from "./js/moon.js";
+
+    // The phases that judge a pairing: a crescent shows the terminator at its
+    // most slender, the quarter shows the straight edge, the gibbous shows a
+    // sliver of shadow, the full disc is the pure lit colour.
+    const READING_FRACTIONS = [
+      { label: "Waxing crescent", fraction: 0.125 },
+      { label: "First quarter", fraction: 0.25 },
+      { label: "Waxing gibbous", fraction: 0.375 },
+      { label: "Full moon", fraction: 0.5 },
+    ];
+
+    const LIGHT_CARD = "#ffffff";
+    const DARK_CARD = "#181b21";
+
+    // Every pairing: a lit (sunlit limb) and an unlit (shadowed limb) colour,
+    // with a note on what it is for.
+    const PAIRINGS = [
+      {
+        id: "current",
+        name: "Current",
+        lit: "#f0c75e",
+        unlit: "#d7dde5",
+        note: "What ships today (light mode).",
+        currentLight: true,
+      },
+      {
+        id: "goldenrod",
+        name: "Dark goldenrod",
+        lit: "#b8860b",
+        unlit: "#d7dde5",
+        note: "The recommended fix: same hue, deeper.",
+        recommendedLight: true,
+      },
+      {
+        id: "amber",
+        name: "Deep amber",
+        lit: "#c99a2e",
+        unlit: "#d7dde5",
+        note: "A gentler step than goldenrod.",
+      },
+      {
+        id: "gold-slate",
+        name: "Gold on slate",
+        lit: "#f0c75e",
+        unlit: "#aab4c2",
+        note: "Keep the gold, darken the shadowed limb.",
+      },
+      {
+        id: "cream-slate",
+        name: "Cream on slate",
+        lit: "#f2e3c0",
+        unlit: "#aab4c2",
+        note: "Warmer than pure white, still lunar.",
+      },
+      {
+        id: "butter",
+        name: "Pale butter",
+        lit: "#f7e6b0",
+        unlit: "#bfc9d6",
+        note: "Soft; reads well only at large sizes.",
+      },
+      {
+        id: "silver",
+        name: "Moon silver",
+        lit: "#f2f4f7",
+        unlit: "#9aa6b5",
+        note: "The literal Moon — near-white on grey.",
+      },
+      {
+        id: "current-dark",
+        name: "Current (dark)",
+        lit: "#f0c75e",
+        unlit: "#3d4553",
+        note: "What ships today (dark mode).",
+        currentDark: true,
+      },
+      {
+        id: "pale-dark",
+        name: "Pale gold (dark)",
+        lit: "#f5d98a",
+        unlit: "#4a4a52",
+        note: "Softer and brighter; suits dark mode.",
+      },
+      {
+        id: "butter-dark",
+        name: "Pale butter (dark)",
+        lit: "#f7e6b0",
+        unlit: "#39404f",
+        note: "The most lunar of the dark pairings.",
+      },
+      {
+        id: "white-dark",
+        name: "Moon white (dark)",
+        lit: "#efe9dc",
+        unlit: "#39404f",
+        note: "Nearly colourless; the least gold of all.",
+      },
+    ];
+
+    // --- contrast, computed the WCAG way -------------------------------------
+    function channel(c) {
+      const v = c / 255;
+      return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    }
+    function luminance(hex) {
+      const h = hex.replace("#", "");
+      const r = parseInt(h.slice(0, 2), 16);
+      const g = parseInt(h.slice(2, 4), 16);
+      const b = parseInt(h.slice(4, 6), 16);
+      return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+    }
+    function contrast(a, b) {
+      const la = luminance(a);
+      const lb = luminance(b);
+      const hi = Math.max(la, lb);
+      const lo = Math.min(la, lb);
+      return (hi + 0.05) / (lo + 0.05);
+    }
+    function band(ratio) {
+      if (ratio >= 2) return "good";
+      if (ratio >= 1.5) return "weak";
+      return "poor";
+    }
+    const fixed = (n) => n.toFixed(2);
+
+    // --- rendering ------------------------------------------------------------
+    function swatch(ph) {
+      const discRatio = contrast(ph.lit, ph.unlit);
+      const onCard = contrast(ph.lit, ph.card);
+      const cls = band(discRatio);
+      const tags = [];
+      if (ph.currentLight || ph.currentDark) tags.push("<div class=\"tag\">Shipped</div>");
+      else if (ph.recommendedLight) tags.push("<div class=\"tag\">Recommended</div>");
+      // Inline custom properties: this is the one place the page's own read
+      // is not the app's tokens, because it must show many pairings at once.
+      const style = `style="--moon:${ph.unlit};--moon-lit:${ph.lit}"`;
+      return `<article class="swatch${ph.currentLight || ph.currentDark ? " current" : ""}">
+        ${tags.join("")}
+        <svg viewBox="0 0 64 64" width="64" height="64" role="img"
+             aria-label="${ph.name}: lit ${ph.lit} on unlit ${ph.unlit}"
+             ${style}>${moonGlyph({ fraction: 0.375 }, 64)}</svg>
+        <div class="name">${ph.name}</div>
+        <div class="hexes">${ph.lit} · ${ph.unlit}</div>
+        <div class="ratio ${cls}">${fixed(discRatio)}:1 lit/unlit</div>
+        <div class="hexes">${fixed(onCard)}:1 on card</div>
+      </article>`;
+    }
+
+    function renderGrid(el, card, dark) {
+      const list = dark
+        ? PAIRINGS.filter((p) => p.currentDark || p.id.endsWith("-dark"))
+        : PAIRINGS.filter((p) => !p.id.endsWith("-dark"));
+      el.innerHTML = list.map((p) => swatch({ ...p, card })).join("");
+    }
+
+    function renderStrip(el, lit, unlit) {
+      const style = `style="--moon:${unlit};--moon-lit:${lit}"`;
+      el.innerHTML = READING_FRACTIONS.map((f) => `<div>
+          <svg viewBox="0 0 76 76" ${style} aria-hidden="true">${moonGlyph({ fraction: f.fraction }, 76)}</svg>
+          <div class="strip-label">${f.label}</div>
+        </div>`).join("");
+    }
+
+    // The strips show the shipped pairing and the recommended one, so the
+    // crescent sliver can be compared directly at both.
+    renderStrip(document.getElementById("strip-light"), "#b8860b", "#d7dde5");
+    renderStrip(document.getElementById("strip-dark"), "#f0c75e", "#3d4553");
+    renderGrid(document.getElementById("grid-light"), LIGHT_CARD, false);
+    renderGrid(document.getElementById("grid-dark"), DARK_CARD, true);
+
+    // Expose the maths for hand-checking in the console: the page claims
+    // numbers, so it should be possible to recompute them without the page.
+    window.moonStudy = { contrast, luminance, band, PAIRINGS };
+  </script>
+</body>
+</html>
