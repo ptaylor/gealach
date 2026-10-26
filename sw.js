@@ -7,7 +7,7 @@
 //
 // A service worker only runs over HTTPS or localhost — see AGENTS.md.
 
-const VERSION = "v0.16";
+const VERSION = "v0.17";
 const SHELL_CACHE = `gealach-shell-${VERSION}`;
 const API_CACHE = `gealach-api-${VERSION}`;
 
