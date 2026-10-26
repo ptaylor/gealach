@@ -402,6 +402,8 @@ Numbered, as agreed, so a later change can be checked against them.
    wanted), labelled with the model's resolution and the word "model".
 9. Show **surge separately** where the Marine Institute publishes it, so it is
    visible that the prediction excludes it and by how much the two differ.
+   The surge card carries a sparkline of the observed window, as bars about a
+   zero line (see *The surge sparkline* below).
 10. Fall back to the **global model** (Open-Meteo Marine) when the point is
     outside the 38 Irish stations (`GLOBAL_MODEL_FALLBACK_KM`, **100 km**, in
     `js/app.js`), and say that this is what happened.
@@ -691,6 +693,31 @@ Update this section in the same commit that adds or upgrades a dependency.
   - `setFetchError`/`clearFetchError` drive the `#error-card` (a **Try again**
     button calls `retryFetch`, which aborts first for a fresh controller);
     `setSearchError` remains for a search that cannot be answered at all.
+
+### The surge sparkline (`drawSurgeSpark`, `js/app.js`)
+
+- **Role**: show the *shape* of the observed surge over the window, in the
+  surge card, without implying anything about the forecast.
+- **Why it is not on the tide curve.** Surge here is observation only
+  (`imiSurgeObservationINTGN`) and lags real time by hours, while the summary
+  curve runs ~12 h forward: the two barely overlap, and a shared axis would
+  read as forecast surge that Marine Institute does not publish in that
+  dataset. `imiSurgePrediction` exists but is not called — using it would
+  silently change what the chart means.
+- **Best Practices**:
+  - **Bars, not a line.** Surge is a signed displacement from the prediction;
+    a bar about a zero line makes the sign obvious, where a line crossing zero
+    reads as still water.
+  - **Symmetric scale with a floor** (`Math.max(0.05, peak)`). Scaling to the
+    data alone would magnify ±3 mm of calm-weather noise into a mountain. A
+    calm window must read flat.
+  - **Bucket to ~120 columns.** 577 five-minute samples across 360 px is
+    invisible mush; one bar per ~24 min is legible at phone width.
+  - **Label the scale at both ends** and name the axis "local time" — the
+    times are converted to the place's zone, so a window starting 00:00 UTC
+    can begin at 01:00 and would otherwise look like an off-by-one.
+  - Guard the degenerate cases: fewer than two finite samples draws nothing.
+
 ### First-run hints (coachmarks)
 
 - **Role**: a short set of coachmarks that point out the app's gestures the
