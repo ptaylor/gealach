@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0b6bcb" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)" />
   <meta name="description" content="What the sea is doing at a coastal place: tide height and state now, the next high and low, the range, and the modelled current." />
-  <meta name="version" content="v0.16" />
+  <meta name="version" content="v0.17" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
   <link rel="icon" href="icons/icon-192.png" type="image/png" sizes="192x192" />
@@ -239,6 +239,16 @@
     .curve-now-time { fill: var(--accent); font-weight: 600; }
     .curve-fill { fill: var(--accent); opacity: 0.12; }
     .sum-axis { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; margin-top: -0.35rem; }
+
+    /* Surge sparkline: a separate small plot, so it is never read as a second
+       tide curve. Bars rather than a line — the quantity is a displacement up
+       or down from the prediction, and a bar makes the sign obvious. */
+    svg#surge-spark { display: block; width: 100%; height: auto; margin-top: 0.6rem; overflow: visible; }
+    .spark-bar-up { fill: var(--warn); opacity: 0.55; }
+    .spark-bar-down { fill: var(--accent); opacity: 0.4; }
+    .spark-zero { stroke: var(--border); stroke-width: 1; }
+    .spark-scale { fill: var(--muted); font-size: 9px; font-variant-numeric: tabular-nums; }
+    .spark-axis { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--muted); font-variant-numeric: tabular-nums; margin-top: 0.1rem; }
 
     .sum-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.8rem; margin-bottom: 0.2rem; }
     .sum-name { font-size: 1.2rem; font-weight: 700; cursor: pointer; }
@@ -507,8 +517,9 @@
       <div class="card hidden" id="surge-card">
         <h2>Surge — observed, separate from the prediction</h2>
         <div id="surge"></div>
+        <svg id="surge-spark" viewBox="0 0 360 64" role="img" aria-label="Surge over the observed window"></svg>
+        <div class="spark-axis" id="surge-spark-axis"></div>
       </div>
-
       <div id="provenance" class="muted provenance"></div>
     </section>
 

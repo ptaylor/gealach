@@ -1074,6 +1074,8 @@ function hasODMSeries(r) {
 function renderSurge() {
   const card = $("surge-card");
   const box = $("surge");
+  const spark = $("surge-spark");
+  const sparkAxis = $("surge-spark-axis");
   if (!surgeResult || !surgeResult.series.length) {
     card.classList.add("hidden");
     return;
@@ -1085,6 +1087,91 @@ function renderSurge() {
     `tide <strong>${m(latest.tide)} m</strong>, ` +
     `surge <strong>${m(latest.surge)} m</strong>` +
     `<div class="muted">The prediction above excludes this surge.</div>`;
+  drawSurgeSpark(spark, sparkAxis);
+}
+
+// The surge as bars over the observed window. Deliberately a separate, small
+// plot rather than a line on the tide curve: the surge is an observation that
+// lags real time by up to a few hours, while the tide curve runs forward, so
+// the two would not overlap and a shared axis would imply forecast surge the
+// source does not publish.
+//
+// The scale is symmetric about zero and fixed to the data's own extent, so a
+// calm fortnight reads as a flat line and a storm reads as a wall — the shape
+// is the message, and the axis labels carry the magnitude.
+function drawSurgeSpark(svg, axisEl) {
+  const pts = surgeResult.series
+    .filter((p) => p.surge != null && Number.isFinite(p.surge))
+    .map((p) => ({ t: Date.parse(p.time), v: p.surge }));
+  if (pts.length < 2) {
+    svg.innerHTML = "";
+    axisEl.innerHTML = "";
+    return;
+  }
+
+  const W = 360;
+  const H = 64;
+  const padTop = 12;
+  const padBottom = 12;
+  const padLeft = 8;
+  const padRight = 8;
+
+  const t0 = pts[0].t;
+  const t1 = pts[pts.length - 1].t;
+  const span = t1 - t0 || 1;
+
+  // Symmetric scale with a floor, so a dead-calm window does not magnify noise
+  // into a dramatic-looking chart.
+  const peak = Math.max(0.05, ...pts.map((p) => Math.abs(p.v)));
+  const scale = peak;
+
+  const x = (t) => padLeft + ((t - t0) / span) * (W - padLeft - padRight);
+  const mid = (H - padBottom + padTop) / 2;
+  const halfHeight = (H - padTop - padBottom) / 2;
+  const y = (v) => mid - (v / scale) * halfHeight;
+
+  // One bar per sample would be 576 hairlines; bucket to ~120 columns and take
+  // the sample nearest each bucket's centre. At 5-minute steps over 48 h that
+  // is a bar every ~24 minutes, which is legible at phone width.
+  const COLS = 120;
+  const bars = [];
+  for (let i = 0; i < COLS; i += 1) {
+    const tA = t0 + (span * i) / COLS;
+    const tB = t0 + (span * (i + 1)) / COLS;
+    let best = null;
+    for (const p of pts) {
+      if (p.t < tA || p.t > tB) continue;
+      if (!best || Math.abs(p.t - (tA + tB) / 2) < Math.abs(best.t - (tA + tB) / 2)) best = p;
+    }
+    if (best) bars.push({ x: x((tA + tB) / 2), v: best.v });
+  }
+
+  const barW = Math.max(1, (W - padLeft - padRight) / COLS - 0.6);
+  let inner = "";
+  inner += `<line class="spark-zero" x1="${padLeft}" y1="${mid.toFixed(1)}" x2="${W - padRight}" y2="${mid.toFixed(1)}" />`;
+  for (const b of bars) {
+    const isUp = b.v >= 0;
+    const yv = y(b.v);
+    const top = Math.min(yv, mid);
+    const h = Math.max(0.6, Math.abs(yv - mid));
+    inner +=
+      `<rect class="spark-bar-${isUp ? "up" : "down"}" x="${(b.x - barW / 2).toFixed(1)}" ` +
+      `y="${top.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" />`;
+  }
+  // Scale marks, so the bars are readable without a hover.
+  inner += `<text class="spark-scale" x="${W - padRight}" y="${padTop}" text-anchor="end">+${scale.toFixed(1)} m</text>`;
+  inner += `<text class="spark-scale" x="${W - padRight}" y="${H - padBottom + 9}" text-anchor="end">-${scale.toFixed(1)} m</text>`;
+
+  svg.innerHTML = inner;
+
+  // The window's own clock times, in the place's zone — the same convention as
+  // the tide curve's axis, so the two cards can be read against each other. The
+  // times are local, so a window that begins at 00:00 UTC can begin at 01:00 on
+  // this axis; the axis says so rather than leaving it to look like an error.
+  axisEl.innerHTML =
+    `<span>${fmtDay(iso(new Date(t0)), zone)}, ${fmtClock(iso(new Date(t0)), zone)}</span>` +
+    `<span>${pts.length} observations · local time</span>` +
+    `<span>${fmtDay(iso(new Date(t1)), zone)}, ${fmtClock(iso(new Date(t1)), zone)}</span>`;
 }
 
 // ---------------------------------------------------------------------------
